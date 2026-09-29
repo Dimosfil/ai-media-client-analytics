@@ -1,4 +1,11 @@
-# Local/generated AI-agent memory and runtime noise
+.env
+.env.services
+posthog/
+share/
+backups/
+compose/
+__pycache__/
+.local-tools/
 tools/project-memory/*.sqlite
 tools/project-memory/*.sqlite-*
 tools/project-memory/*.db
@@ -7,7 +14,6 @@ tools/project-memory/vector-index/
 tools/project-memory/chroma/
 tools/project-memory/embedding-cache/
 tools/project-memory/semantic-corpus*.jsonl
-__pycache__/
 tools/project-memory/devops.local.json
 .repowise/
 tools/summary/*.tmp

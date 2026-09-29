@@ -1,5 +1,7 @@
 # Project Memory
 
+Deployment contract: [PostHog deployment](specs/posthog-deployment.md).
+
 This folder stores implementation-driving project knowledge for AI agents.
 
 Use it for verified behavior, rules, and implementation contracts that should

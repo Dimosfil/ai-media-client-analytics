@@ -1,0 +1,5 @@
+docker-compose.base.yml text eol=lf
+docker-compose.yml text eol=lf
+docker-compose.security.yml text eol=lf
+POSTHOG_LICENSE text eol=lf
+analyticsctl.py text eol=lf

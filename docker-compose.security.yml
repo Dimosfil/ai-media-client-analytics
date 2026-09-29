@@ -1,0 +1,47 @@
+# Generated for the pinned PostHog Compose. Do not edit upstream snapshots.
+services:
+  proxy:
+    environment:
+      CADDY_HOST: ${DOMAIN}
+    volumes:
+      - caddy-legacy-data:/root/.caddy
+  capture:
+    build: !reset null
+  capture-logs:
+    build: !reset null
+  cymbal:
+    build: !reset null
+  cymbal-resolution:
+    build: !reset null
+  db:
+    volumes:
+      - ./posthog/docker/postgres-init-scripts:/docker-entrypoint-initdb.d:ro
+      - ./posthog/products:/products:ro
+  elasticsearch:
+    volumes:
+      - elasticsearch-data:/var/lib/elasticsearch/data
+  feature-flags:
+    build: !reset null
+  hypercache-server:
+    build: !reset null
+  objectstorage:
+    ports: !reset []
+  personhog-replica:
+    build: !reset null
+  personhog-router:
+    build: !reset null
+  property-defs-ai:
+    build: !reset null
+  property-defs-rs:
+    build: !reset null
+  replay-capture:
+    build: !reset null
+  seaweedfs:
+    ports: !reset []
+  temporal:
+    ports: !reset []
+  temporal-ui:
+    ports: !reset []
+volumes:
+  caddy-legacy-data:
+  elasticsearch-data:
