@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "entrypoint_max_bytes": 6500,
+  "template_entrypoint_max_bytes": 7000,
+  "command_index_max_bytes": 10000,
+  "metadata_max_bytes": 5500,
+  "runtime_module_max_bytes": 12000,
+  "section_max_chars": 6000,
+  "git_snapshot_max_chars": 4000,
+  "start_packet_max_chars": 34000,
+  "route_packet_default_max_chars": 36000,
+  "route_packet_overrides": {
+    "info": 46000
+  }
+}

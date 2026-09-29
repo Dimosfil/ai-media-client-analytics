@@ -1,0 +1,654 @@
+{
+  "schema_version": 1,
+  "match_policy": "longest_alias_prefix",
+  "routes": [
+    {
+      "id": "help",
+      "aliases": [
+        "gi help",
+        "gi хелп",
+        "ги help",
+        "ги хелп",
+        "gi commands",
+        "gi команды",
+        "ги команды"
+      ],
+      "contract": "Show the compact local GI command index without running another command or mutating project state.",
+      "context_files": [
+        "COMMANDS.md"
+      ]
+    },
+    {
+      "id": "error-fix",
+      "aliases": [
+        "gi ошибка фикс",
+        "ги ошибка фикс",
+        "gi error fix"
+      ],
+      "contract": "Repair the supplied or newest relevant GI rule bug across live rules, templates, migration metadata, version, changelog, verification, commit, and push.",
+      "context_files": [
+        "patterns/AGENTS_RUNTIME/14-update-intake.md",
+        "patterns/AGENTS_RUNTIME/04-content-and-authoring.md",
+        "patterns/AGENTS_RUNTIME/15-verification.md",
+        "patterns/AGENTS_RUNTIME/16-git-policy.md"
+      ]
+    },
+    {
+      "id": "error-intake",
+      "aliases": [
+        "gi ошибка",
+        "ги ошибка",
+        "gi error"
+      ],
+      "contract": "Capture and privacy-review available evidence for a suspected reusable GI rule bug without repairing it.",
+      "context_files": [
+        "patterns/AGENTS_RUNTIME/14-update-intake.md",
+        "patterns/AGENTS_RUNTIME/07-scope-and-evidence.md"
+      ]
+    },
+    {
+      "id": "init",
+      "aliases": [
+        "connect shared instructions",
+        "gi init",
+        "инит правила",
+        "инициализируй",
+        "инит",
+        "init"
+      ],
+      "contract": "Bootstrap or restore the shared instruction kit into the active project; this is not git initialization or repository replacement.",
+      "context_files": [
+        "BOOTSTRAP.md",
+        "patterns/AGENTS_RUNTIME/07-startup.md",
+        "patterns/AGENTS_RUNTIME/10-private-scope-and-missing-context.md"
+      ]
+    },
+    {
+      "id": "start-sprint",
+      "aliases": [
+        "gi start sprint",
+        "gi sprint start",
+        "gi старт спринт",
+        "ги старт спринт",
+        "gi активный спринт",
+        "ги активный спринт",
+        "gi work sprint"
+      ],
+      "contract": "Resolve the configured task manager, select the single active Sprint/Cycle, and execute its tasks through the documented lifecycle.",
+      "context_files": [
+        "patterns/AGENTS_RUNTIME/07-startup.md",
+        "patterns/AGENTS_RUNTIME/08-config-service.md",
+        "patterns/AGENTS_RUNTIME/08-task-manager.md",
+        "patterns/AGENTS_RUNTIME/08-sprint.md",
+        "patterns/AGENTS_RUNTIME/15-verification.md"
+      ]
+    },
+    {
+      "id": "start",
+      "aliases": [
+        "gi восстановить контекст",
+        "ги восстановить контекст",
+        "gi восстанови",
+        "ги восстанови",
+        "gi restore",
+        "gi start",
+        "gi старт",
+        "ги старт"
+      ],
+      "contract": "Restore only minimum orientation from local instructions, the latest handoff summary, and compact Git state, then work on the current explicitly supplied task.",
+      "context_files": [
+        "patterns/AGENTS_RUNTIME/07-startup.md"
+      ]
+    },
+    {
+      "id": "memory-retrieval",
+      "aliases": [
+        "gi sqlite",
+        "gi sql",
+        "gi vector"
+      ],
+      "contract": "Inspect the configured structured or semantic project-memory node and report readiness, metrics, and exact gaps.",
+      "context_files": [
+        "patterns/AGENTS_RUNTIME/01-purpose.md",
+        "patterns/AGENTS_RUNTIME/09-project-memory-operations.md",
+        "patterns/AGENTS_RUNTIME/15-verification.md"
+      ]
+    },
+    {
+      "id": "info",
+      "aliases": [
+        "gi info",
+        "ги инфо"
+      ],
+      "contract": "Find or build the current project's verified purpose, users, visible functionality, workflows, stack pointer, and documentation gaps.",
+      "context_files": [
+        "patterns/AGENTS_RUNTIME/01-purpose.md",
+        "patterns/AGENTS_RUNTIME/04-content-and-authoring.md",
+        "patterns/AGENTS_RUNTIME/06-tool-usage-and-token-economy.md",
+        "patterns/AGENTS_RUNTIME/11-language-preferences.md",
+        "patterns/AGENTS_RUNTIME/15-verification.md"
+      ]
+    },
+    {
+      "id": "stack",
+      "aliases": [
+        "gi stack",
+        "ги стек"
+      ],
+      "contract": "Find or build the canonical verified technology-stack inventory from current project evidence.",
+      "context_files": [
+        "patterns/AGENTS_RUNTIME/04-content-and-authoring.md",
+        "patterns/AGENTS_RUNTIME/06-tool-usage-and-token-economy.md",
+        "patterns/AGENTS_RUNTIME/15-verification.md"
+      ]
+    },
+    {
+      "id": "logic",
+      "aliases": [
+        "gi logic",
+        "ги логика"
+      ],
+      "contract": "Recover, document, or adapt project logic, using an explicitly supplied source only within the authorized scope.",
+      "context_files": [
+        "patterns/AGENTS_RUNTIME/01-purpose.md",
+        "patterns/AGENTS_RUNTIME/06-tool-usage-and-token-economy.md",
+        "patterns/AGENTS_RUNTIME/10-private-scope-and-missing-context.md",
+        "patterns/AGENTS_RUNTIME/15-verification.md"
+      ]
+    },
+    {
+      "id": "mod",
+      "aliases": [
+        "gi game path",
+        "ги путь игры",
+        "gi mod path",
+        "ги мод путь",
+        "gi mod",
+        "ги мод"
+      ],
+      "contract": "Prepare a game-modding project and verify any explicitly selected local game installation path.",
+      "context_files": [
+        "patterns/AGENTS_RUNTIME/19-game-modding.md",
+        "patterns/AGENTS_RUNTIME/10-private-scope-and-missing-context.md"
+      ]
+    },
+    {
+      "id": "rag-rebuild",
+      "aliases": [
+        "gi tools rebuild",
+        "gi rag rebuild",
+        "ги тулс ребилд",
+        "ги раг ребилд"
+      ],
+      "contract": "Rebuild only the requested configured GI/project-memory/RAG node, or the full system when no node is named, using documented commands and verification.",
+      "context_files": [
+        "patterns/AGENTS_RUNTIME/09-project-memory-operations.md",
+        "patterns/AGENTS_RUNTIME/15-verification.md"
+      ]
+    },
+    {
+      "id": "build",
+      "aliases": [
+        "gi rebuild",
+        "ги ребилд",
+        "gi build",
+        "gi собрать",
+        "ги билд",
+        "ги собрать"
+      ],
+      "contract": "Build or rebuild the current project artifact through documented project-local commands and verify the output.",
+      "context_files": [
+        "patterns/AGENTS_RUNTIME/09-build-and-install.md",
+        "patterns/AGENTS_RUNTIME/12-ui-and-focus.md",
+        "patterns/AGENTS_RUNTIME/15-verification.md"
+      ]
+    },
+    {
+      "id": "docker",
+      "aliases": [
+        "gi docker",
+        "ги докер"
+      ],
+      "contract": "Restart the documented Docker or Compose runtime, rebuilding first when freshness cannot be proven, and verify container health.",
+      "context_files": [
+        "patterns/AGENTS_RUNTIME/09-runtime-and-defaults.md",
+        "patterns/AGENTS_RUNTIME/12-ui-and-focus.md",
+        "patterns/AGENTS_RUNTIME/15-verification.md"
+      ]
+    },
+    {
+      "id": "config-self-registration",
+      "aliases": [
+        "gi config service on",
+        "gi config service off",
+        "ги конфиг сервис on",
+        "ги конфиг сервис off",
+        "ги конфиг сервис вкл",
+        "ги конфиг сервис выкл"
+      ],
+      "contract": "Toggle the current application's documented config-service self-registration flag without starting or stopping config-service.",
+      "context_files": [
+        "patterns/AGENTS_RUNTIME/08-config-service.md",
+        "patterns/AGENTS_RUNTIME/15-verification.md"
+      ]
+    },
+    {
+      "id": "config",
+      "aliases": [
+        "gi config service url",
+        "ги конфиг сервис url",
+        "ги конфиг сервис урл",
+        "gi config service",
+        "ги конфиг сервис",
+        "gi config on",
+        "gi config off",
+        "gi конфиг вкл",
+        "gi конфиг выкл",
+        "gi конфиг он",
+        "gi конфиг офф",
+        "ги конфиг вкл",
+        "ги конфиг выкл",
+        "ги конфиг он",
+        "ги конфиг офф",
+        "gi config",
+        "gi конфиг",
+        "ги конфиг"
+      ],
+      "contract": "Inspect or update only the documented project-local config-service integration settings and verify the resulting value.",
+      "context_files": [
+        "patterns/AGENTS_RUNTIME/08-config-service.md",
+        "patterns/AGENTS_RUNTIME/15-verification.md"
+      ]
+    },
+    {
+      "id": "first-test",
+      "aliases": [
+        "gi first test",
+        "gi первый тест",
+        "ги первый тест"
+      ],
+      "contract": "Reset only documented rebuildable first-run state, launch the project, and verify the first-launch workflow.",
+      "context_files": [
+        "patterns/AGENTS_RUNTIME/09-runtime-and-defaults.md",
+        "patterns/AGENTS_RUNTIME/12-ui-and-focus.md",
+        "patterns/AGENTS_RUNTIME/15-verification.md"
+      ]
+    },
+    {
+      "id": "defaults",
+      "aliases": [
+        "gi defaults",
+        "gi default",
+        "ги дефолт"
+      ],
+      "contract": "Restore documented project defaults without guessing destructive targets, then start and verify the default state.",
+      "context_files": [
+        "patterns/AGENTS_RUNTIME/09-runtime-and-defaults.md",
+        "patterns/AGENTS_RUNTIME/12-ui-and-focus.md",
+        "patterns/AGENTS_RUNTIME/15-verification.md"
+      ]
+    },
+    {
+      "id": "install",
+      "aliases": [
+        "gi install",
+        "gi инсталл",
+        "ги инсталл"
+      ],
+      "contract": "Build, package, and verify the requested installer artifact; default to Windows only when no platform is named.",
+      "context_files": [
+        "patterns/AGENTS_RUNTIME/09-build-and-install.md",
+        "patterns/AGENTS_RUNTIME/12-ui-and-focus.md",
+        "patterns/AGENTS_RUNTIME/15-verification.md"
+      ]
+    },
+    {
+      "id": "local-sprint",
+      "aliases": [
+        "gi local sprint",
+        "gi sprint local",
+        "gi локальный спринт",
+        "gi спринт локально",
+        "ги локальный спринт",
+        "ги спринт локально"
+      ],
+      "contract": "Run the supplied or documented project-local sprint checklist without task-manager or config-service mutation.",
+      "context_files": [
+        "patterns/AGENTS_RUNTIME/07-startup.md",
+        "patterns/AGENTS_RUNTIME/08-sprint.md",
+        "patterns/AGENTS_RUNTIME/15-verification.md"
+      ]
+    },
+    {
+      "id": "update",
+      "aliases": [
+        "обновись из",
+        "gi обновить",
+        "gi обновись",
+        "ги обновить",
+        "ги обновись",
+        "gi update"
+      ],
+      "contract": "Apply accepted instruction-kit migrations, verify them, record metadata, and finish only the update-created Git changes when policy allows.",
+      "context_files": [
+        "patterns/AGENTS_RUNTIME/07-startup.md",
+        "patterns/AGENTS_RUNTIME/14-update-intake.md",
+        "patterns/AGENTS_RUNTIME/15-verification.md",
+        "patterns/AGENTS_RUNTIME/16-git-policy.md"
+      ]
+    },
+    {
+      "id": "language",
+      "aliases": [
+        "gi project language",
+        "gi проект язык",
+        "ги проект язык",
+        "gi язык проекта",
+        "ги язык проекта",
+        "gi language",
+        "gi язык",
+        "ги язык"
+      ],
+      "contract": "Configure the requested ordered language surface and persist it in project memory using the documented selection flow.",
+      "context_files": [
+        "patterns/AGENTS_RUNTIME/11-language-preferences.md",
+        "patterns/AGENTS_RUNTIME/15-verification.md"
+      ]
+    },
+    {
+      "id": "commit-language",
+      "aliases": [
+        "gi commit language",
+        "gi коммит язык",
+        "ги коммит язык",
+        "gi язык коммита",
+        "ги язык коммита"
+      ],
+      "contract": "Configure ordered commit-message languages separately from the agent response language.",
+      "context_files": [
+        "patterns/AGENTS_RUNTIME/11-language-preferences.md",
+        "patterns/AGENTS_RUNTIME/16-git-policy.md"
+      ]
+    },
+    {
+      "id": "system-language",
+      "aliases": [
+        "gi system language",
+        "gi систем язык",
+        "ги систем язык"
+      ],
+      "contract": "Configure the agent's project response language preferences without rewriting existing project content.",
+      "context_files": [
+        "patterns/AGENTS_RUNTIME/11-language-preferences.md"
+      ]
+    },
+    {
+      "id": "git-finish",
+      "aliases": [
+        "gi commit push",
+        "gi коммит пуш",
+        "ги коммит пуш",
+        "gi only push",
+        "gi только пуш",
+        "ги только пуш",
+        "gi push",
+        "gi пуш",
+        "ги пуш",
+        "gi commit",
+        "gi коммит",
+        "ги коммит",
+        "gi pull",
+        "gi пул",
+        "ги пул"
+      ],
+      "contract": "Perform only the requested Git finish or pull operation on an established scope with compact status, scope, secret, and remote checks; do not start project-memory auditing, implementation, product testing, or runtime cleanup.",
+      "context_files": [
+        "patterns/AGENTS_RUNTIME/16-git-policy.md"
+      ]
+    },
+    {
+      "id": "summary",
+      "aliases": [
+        "gi summary",
+        "gi саммари",
+        "ги саммари"
+      ],
+      "contract": "Write a compact thematic handoff that preserves decisions, intent, evidence, blockers, and next useful context.",
+      "context_files": [
+        "patterns/AGENTS_RUNTIME/01-purpose.md",
+        "patterns/AGENTS_RUNTIME/06-tool-usage-and-token-economy.md"
+      ]
+    },
+    {
+      "id": "git-summary",
+      "aliases": [
+        "gi git summary",
+        "gi гит-обзор",
+        "ги гит-обзор"
+      ],
+      "contract": "Summarize the latest Git commit using compact metadata and targeted changes without printing a full diff.",
+      "context_files": [
+        "patterns/AGENTS_RUNTIME/16-git-policy.md"
+      ]
+    },
+    {
+      "id": "test-plan",
+      "aliases": [
+        "gi test plan",
+        "gi тест-план",
+        "ги тест-план"
+      ],
+      "contract": "Build a verification plan from current project contracts, affected behavior, failure paths, and observable success criteria.",
+      "context_files": [
+        "patterns/AGENTS_RUNTIME/06-tool-usage-and-token-economy.md",
+        "patterns/AGENTS_RUNTIME/15-verification.md"
+      ]
+    },
+    {
+      "id": "test-task",
+      "aliases": [
+        "gi testing task",
+        "gi test task",
+        "gi тест таск",
+        "ги тест таск",
+        "gi задача теста",
+        "ги задача теста"
+      ],
+      "contract": "Set the active release/full-system verification workload for the next documented gi test run.",
+      "context_files": [
+        "patterns/AGENTS_RUNTIME/09-testing.md",
+        "patterns/AGENTS_RUNTIME/15-verification.md"
+      ]
+    },
+    {
+      "id": "test",
+      "aliases": [
+        "gi full test",
+        "gi release test",
+        "gi system test",
+        "gi test",
+        "ги тест"
+      ],
+      "contract": "Execute the documented release/full-system verification task against live required surfaces and report exact gaps.",
+      "context_files": [
+        "patterns/AGENTS_RUNTIME/09-testing.md",
+        "patterns/AGENTS_RUNTIME/09-runtime-and-defaults.md",
+        "patterns/AGENTS_RUNTIME/12-ui-and-focus.md",
+        "patterns/AGENTS_RUNTIME/15-verification.md"
+      ]
+    },
+    {
+      "id": "refactor",
+      "aliases": [
+        "gi full refactor",
+        "gi refactor",
+        "gi рефактор",
+        "ги рефактор"
+      ],
+      "contract": "Refactor the current project in coherent verified batches while preserving behavior and updating durable architecture memory.",
+      "context_files": [
+        "patterns/AGENTS_RUNTIME/04-content-and-authoring.md",
+        "patterns/AGENTS_RUNTIME/06-tool-usage-and-token-economy.md",
+        "patterns/AGENTS_RUNTIME/15-verification.md",
+        "patterns/AGENTS_RUNTIME/16-git-policy.md",
+        "patterns/AGENTS_RUNTIME/18-startup-product-engineering.md"
+      ]
+    },
+    {
+      "id": "task-manager-test",
+      "aliases": [
+        "gi manager test",
+        "gi tm test",
+        "gi манагер тест",
+        "gi менеджер тест",
+        "ги манагер тест",
+        "ги менеджер тест"
+      ],
+      "contract": "Test the configured task-manager discovery and lifecycle contract without unrelated repository mutation.",
+      "context_files": [
+        "patterns/AGENTS_RUNTIME/08-config-service.md",
+        "patterns/AGENTS_RUNTIME/08-task-manager.md",
+        "patterns/AGENTS_RUNTIME/10-private-scope-and-missing-context.md",
+        "patterns/AGENTS_RUNTIME/15-verification.md"
+      ]
+    },
+    {
+      "id": "task-active",
+      "aliases": [
+        "gi active task",
+        "gi next task",
+        "gi get task"
+      ],
+      "contract": "Resolve and obtain one executable active task through the configured task-manager lifecycle.",
+      "context_files": [
+        "patterns/AGENTS_RUNTIME/08-config-service.md",
+        "patterns/AGENTS_RUNTIME/08-task-manager.md",
+        "patterns/AGENTS_RUNTIME/10-private-scope-and-missing-context.md"
+      ]
+    },
+    {
+      "id": "task-add-sprint",
+      "aliases": [
+        "gi add sprint",
+        "gi create sprint",
+        "gi добавить спринт",
+        "ги добавить спринт"
+      ],
+      "contract": "Create a visible Sprint/Cycle through the configured manager after validating its supported contract.",
+      "context_files": [
+        "patterns/AGENTS_RUNTIME/08-config-service.md",
+        "patterns/AGENTS_RUNTIME/08-task-manager.md",
+        "patterns/AGENTS_RUNTIME/10-private-scope-and-missing-context.md",
+        "patterns/AGENTS_RUNTIME/15-verification.md"
+      ]
+    },
+    {
+      "id": "task-plan",
+      "aliases": [
+        "gi post plan",
+        "gi plan",
+        "gi план",
+        "ги план"
+      ],
+      "contract": "Send the current executable plan through the configured task-manager plan contract.",
+      "context_files": [
+        "patterns/AGENTS_RUNTIME/08-config-service.md",
+        "patterns/AGENTS_RUNTIME/08-task-manager.md",
+        "patterns/AGENTS_RUNTIME/10-private-scope-and-missing-context.md"
+      ]
+    },
+    {
+      "id": "task-manager",
+      "aliases": [
+        "gi manager",
+        "gi tm",
+        "ги менеджер",
+        "ги манагер"
+      ],
+      "contract": "Inspect the configured task manager through config-service and report its supported lifecycle capabilities.",
+      "context_files": [
+        "patterns/AGENTS_RUNTIME/08-config-service.md",
+        "patterns/AGENTS_RUNTIME/08-task-manager.md",
+        "patterns/AGENTS_RUNTIME/10-private-scope-and-missing-context.md"
+      ]
+    },
+    {
+      "id": "prod",
+      "aliases": [
+        "gi production",
+        "gi prod",
+        "gi прод",
+        "ги прод"
+      ],
+      "contract": "Publish the documented development artifact to the configured production service target while preserving production-local state and rollback paths.",
+      "context_files": [
+        "patterns/AGENTS_RUNTIME/09-production.md",
+        "patterns/AGENTS_RUNTIME/10-private-scope-and-missing-context.md",
+        "patterns/AGENTS_RUNTIME/12-ui-and-focus.md",
+        "patterns/AGENTS_RUNTIME/15-verification.md"
+      ]
+    },
+    {
+      "id": "devops",
+      "aliases": [
+        "gi set devops",
+        "gi devops",
+        "ги девопс"
+      ],
+      "contract": "Mark the verified current project as deploy-infrastructure owner using only documented non-secret local metadata.",
+      "context_files": [
+        "patterns/AGENTS_RUNTIME/09-deploy-gateway.md",
+        "patterns/AGENTS_RUNTIME/10-private-scope-and-missing-context.md",
+        "patterns/AGENTS_RUNTIME/15-verification.md"
+      ]
+    },
+    {
+      "id": "deploy",
+      "aliases": [
+        "gi deploy",
+        "ги деплой"
+      ],
+      "contract": "Deploy through the explicitly named or previously selected documented gateway without inventing credentials, mappings, or target paths.",
+      "context_files": [
+        "patterns/AGENTS_RUNTIME/09-deploy-gateway.md",
+        "patterns/AGENTS_RUNTIME/10-private-scope-and-missing-context.md",
+        "patterns/AGENTS_RUNTIME/12-ui-and-focus.md",
+        "patterns/AGENTS_RUNTIME/15-verification.md"
+      ]
+    },
+    {
+      "id": "ftp",
+      "aliases": [
+        "gi upload ftp",
+        "gi deploy ftp",
+        "gi zaley na ftp",
+        "gi залей на фтп",
+        "ги залей на фтп",
+        "gi ftp",
+        "ги фтп"
+      ],
+      "contract": "Configure or execute the documented FTP/SFTP gateway flow while keeping credentials and private remote paths out of shared files and output.",
+      "context_files": [
+        "patterns/AGENTS_RUNTIME/09-deploy-gateway.md",
+        "patterns/AGENTS_RUNTIME/09-ftp.md",
+        "patterns/AGENTS_RUNTIME/10-private-scope-and-missing-context.md",
+        "patterns/AGENTS_RUNTIME/15-verification.md"
+      ]
+    },
+    {
+      "id": "restart",
+      "aliases": [
+        "gi restart",
+        "gi reboot",
+        "ги рестарт",
+        "ги ребут"
+      ],
+      "contract": "Start or restart every documented project application and verify each runtime or visible surface before reporting success.",
+      "context_files": [
+        "patterns/AGENTS_RUNTIME/09-runtime-and-defaults.md",
+        "patterns/AGENTS_RUNTIME/12-ui-and-focus.md",
+        "patterns/AGENTS_RUNTIME/15-verification.md"
+      ]
+    }
+  ]
+}

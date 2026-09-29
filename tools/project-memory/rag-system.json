@@ -1,0 +1,283 @@
+{
+  "version": 2,
+  "project_id": "replace-with-stable-project-slug",
+  "mode": "hybrid-ready",
+  "source_groups": [
+    {
+      "id": "local-instructions",
+      "paths": [
+        "AGENTS.md",
+        "tools/AGENT_RUNBOOK.md",
+        "tools/AGENT_WORKING_AGREEMENTS.md"
+      ],
+      "trust": "project-local",
+      "include": true
+    },
+    {
+      "id": "project-documentation",
+      "paths": [
+        "README.md",
+        "docs/*.md",
+        "docs/**/*.md",
+        "tools/AGENT_RUNBOOK.md"
+      ],
+      "trust": "project-local",
+      "include": true
+    },
+    {
+      "id": "project-memory",
+      "paths": [
+        "tools/project-memory/*.md",
+        "tools/project-memory/*.json",
+        "tools/project-memory/**/*.md",
+        "tools/project-memory/**/*.json"
+      ],
+      "trust": "project-local",
+      "include": true
+    }
+  ],
+  "exclude_globs": [
+    "**/.env*",
+    "**/*secret*",
+    "**/*token*",
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/build/**",
+    "**/*.log",
+    "**/*.lock",
+    "tools/project-memory/*.sqlite",
+    "tools/project-memory/*.sqlite-*",
+    "tools/project-memory/vector-index/**"
+  ],
+  "structured_memory": {
+    "kind": "sqlite",
+    "path": "tools/project-memory/project_memory.sqlite",
+    "commit_database": false,
+    "reviewable_export": "tools/project-memory/NOTES.md",
+    "logical_indexes": {
+      "code": "current implementation facts: paths, symbols, commands, schemas, errors, dependency edges",
+      "documentation": "project orientation: overview, user-visible functionality, stack, commands, operations, troubleshooting",
+      "specifications": "portable product behavior: business rules, feature algorithms, workflow contracts, architecture migrations"
+    }
+  },
+  "keyword_retrieval": {
+    "enabled": true,
+    "kind": "sqlite-fts5",
+    "purpose": "exact paths, commands, symbols, and error text"
+  },
+  "chunking": {
+    "enabled": true,
+    "kind": "markdown-aware",
+    "max_chars": 4000,
+    "export_path": "tools/project-memory/semantic-corpus.jsonl"
+  },
+  "embedding_metadata": {
+    "model_ref": "configure-in-project-local-runtime",
+    "provider": "configure-in-project-local-runtime",
+    "dimensions": null,
+    "collection_version": "project-memory-v1",
+    "embed_source": "chunks",
+    "do_not_mix_models_in_collection": true
+  },
+  "vector_retrieval": {
+    "enabled": false,
+    "provider": "chroma",
+    "collection": "project-memory-v1",
+    "local_index_path": "tools/project-memory/vector-index/chroma",
+    "embedding_model_ref": "configure-in-project-local-runtime",
+    "dimensions": null
+  },
+  "service_retrieval": {
+    "enabled": false,
+    "provider": "qdrant",
+    "service_id": "",
+    "collection": "project-memory-v1"
+  },
+  "code_intelligence": {
+    "enabled": false,
+    "provider": "repowise",
+    "project_path": ".",
+    "allow_external_project_path": false,
+    "transport": {
+      "kind": "mcp-stdio",
+      "command": "repowise",
+      "args": [
+        "mcp",
+        "{project_path}",
+        "--transport",
+        "stdio"
+      ],
+      "environment_variables": [],
+      "protocol_version": "2025-06-18"
+    },
+    "allowed_tools": [
+      "get_context",
+      "get_symbol",
+      "get_risk",
+      "get_health"
+    ],
+    "capabilities": {
+      "context": {
+        "tool": "get_context",
+        "argument": "targets",
+        "argument_type": "array"
+      },
+      "symbol": {
+        "tool": "get_symbol",
+        "argument": "query"
+      },
+      "risk": {
+        "tool": "get_risk",
+        "argument": "targets",
+        "argument_type": "array"
+      },
+      "health": {
+        "tool": "get_health",
+        "argument": "targets",
+        "argument_type": "array"
+      }
+    },
+    "routing": {
+      "default_route": "project_memory",
+      "combined_route": "federated",
+      "fallback_sources": [
+        "project_memory",
+        "source_files"
+      ],
+      "routes": [
+        {
+          "id": "project_memory",
+          "sources": [
+            "project_memory"
+          ],
+          "terms": [
+            "requirement",
+            "business rule",
+            "workflow",
+            "decision",
+            "specification",
+            "policy",
+            "runbook",
+            "требование",
+            "бизнес-правило",
+            "процесс",
+            "решение",
+            "спецификация"
+          ],
+          "path_extensions": [
+            ".md",
+            ".json"
+          ]
+        },
+        {
+          "id": "code_intelligence",
+          "sources": [
+            "code_intelligence"
+          ],
+          "terms": [
+            "symbol",
+            "caller",
+            "callee",
+            "call graph",
+            "dependency",
+            "blast radius",
+            "code health",
+            "dead code",
+            "символ",
+            "вызывает",
+            "зависимость",
+            "риск изменения",
+            "здоровье кода"
+          ],
+          "path_extensions": [
+            ".cs",
+            ".py",
+            ".js",
+            ".ts",
+            ".tsx",
+            ".java",
+            ".go",
+            ".rs",
+            ".cpp",
+            ".h"
+          ]
+        }
+      ]
+    },
+    "freshness": {
+      "require_indexed_commit": true,
+      "warn_on_dirty_worktree": true,
+      "reject_stale": false
+    },
+    "timeouts": {
+      "request_seconds": 30
+    },
+    "generated_paths": [
+      ".repowise/"
+    ]
+  },
+  "context_packet": {
+    "max_chunks": 8,
+    "max_estimated_tokens": 4000,
+    "require_source_paths": true,
+    "include_rejected_source_summary": false
+  },
+  "activation_limits": {
+    "sqlite": {
+      "inspect_command": "gi sql",
+      "tracked_text_files": 50,
+      "project_memory_files": 25,
+      "project_memory_kb": 200,
+      "feature_spec_files": 10,
+      "repeated_exact_misses": 2
+    },
+    "vector": {
+      "inspect_command": "gi vector",
+      "semantic_chunks": 300,
+      "curated_spec_kb": 500,
+      "feature_spec_files": 25,
+      "repeated_conceptual_misses": 3,
+      "service_grade_chunks": 10000
+    }
+  },
+  "rebuild": {
+    "full_command": "gi tools rebuild",
+    "requires_confirmation_for_full": true,
+    "nodes": {
+      "manifest": {
+        "command": "",
+        "status_command": ""
+      },
+      "sql": {
+        "command": "python .\\tools\\project-memory\\build_project_memory_index.py rebuild",
+        "status_command": "python .\\tools\\project-memory\\build_project_memory_index.py stats"
+      },
+      "chunks": {
+        "command": "python .\\tools\\project-memory\\build_project_memory_index.py export-chunks",
+        "status_command": ""
+      },
+      "vector": {
+        "command": "uv run --with chromadb python .\\tools\\project-memory\\build_chroma_index.py rebuild",
+        "status_command": "uv run --with chromadb python .\\tools\\project-memory\\build_chroma_index.py status"
+      },
+      "code_intelligence": {
+        "command": "",
+        "status_command": "python .\\tools\\project-memory\\code_intelligence.py status"
+      },
+      "evals": {
+        "command": "python .\\tools\\project-memory\\rag_check.py --skip-vector run",
+        "status_command": "python .\\tools\\project-memory\\rag_check.py --skip-vector health"
+      }
+    },
+    "state": {
+      "last_full_rebuild_migration": "",
+      "last_full_rebuild_at": "",
+      "last_node_rebuilds": {}
+    }
+  },
+  "writeback": {
+    "write_verified_findings": true,
+    "markdown_export": "tools/project-memory/NOTES.md",
+    "store_uncertain_findings": "mark-explicitly"
+  }
+}
