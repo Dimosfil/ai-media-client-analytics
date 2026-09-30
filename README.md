@@ -16,15 +16,27 @@
 ```bash
 python3 analyticsctl.py init --domain analytics.your-domain.net
 python3 analyticsctl.py prepare
-python3 analyticsctl.py lock-images
 python3 analyticsctl.py check
 docker compose -f docker-compose.yml -f docker-compose.security.yml -f docker-compose.images.json config --quiet
 python3 analyticsctl.py up
 ```
 
-`init` создаёт `.env` со случайными секретами и не перезаписывает его. `prepare` получает закреплённый коммит, сверяет Compose-файлы, создаёт служебные файлы и скачивает GeoIP; контейнеры не запускает. `lock-images` требует работающий Docker daemon и может скачать много больших образов. Не коммитьте `.env`, `.env.services`, `posthog/`, GeoIP, ключи, резервные копии и пользовательские данные. Полный вывод `docker compose config` может содержать секреты; используйте `--quiet` либо не публикуйте вывод.
+`init` создаёт `.env` со случайными секретами и не перезаписывает его. `prepare` получает закреплённый коммит, сверяет Compose-файлы, создаёт служебные файлы и скачивает GeoIP; контейнеры не запускает. Digest-файлы уже зафиксированы для Linux/amd64. Только при создании **нового** lock на другой платформе и после проверки совместимости запускайте `python3 analyticsctl.py lock-images`; команда откажется перезаписывать существующие lock-файлы. Не коммитьте `.env`, `.env.services`, `posthog/`, GeoIP, ключи, резервные копии и пользовательские данные. Полный вывод `docker compose config` может содержать секреты; используйте `--quiet` либо не публикуйте вывод.
 
-На 2026-09-29 на Windows проверены байтовое совпадение upstream-файлов с закреплённым коммитом, `init`, `prepare`, тесты и конфигурация через реальный Docker Compose v2.39.4 без Docker daemon. Итоговая модель: 38 сервисов, только 80/443 у `proxy`, нет `build` и анонимных томов. Реальные digest-образы и lock-файлы пока не созданы: их нужно получить на Linux-хосте командой `lock-images`. Запуск, HTTPS, UI, smoke, backup и restore пока не проверены.
+На 2026-09-30 на Debian 13/amd64 выполнены `init`, `prepare`, `lock-images` и `check`; скачаны 24 уникальных образа, 38 сервисов привязаны к digest. Итоговая модель публикует только 80/443 у `proxy`, не содержит `build` и анонимных томов. Caddy получил сертификат Let’s Encrypt для тестового имени `analytics-195-209-221-217.sslip.io`. Полный запуск 38 сервисов на VPS с 2 vCPU/4 ГБ RAM/40 ГБ диска занял всю RAM и добавленные 2 ГБ swap до готовности веб-сервиса. UI, `/_health` с HTTP 200, smoke, backup и restore этим запуском не подтверждены.
+
+## Экспериментальный POC на 4 ГБ
+
+`docker-compose.poc.yml` уменьшает Redpanda до одного ядра и 1 ГБ памяти, а веб-сервис до одного Granian-воркера. `up-poc` запускает только `proxy`, `capture`, `ingestion-general`, `plugins`, `feature-flags` и их зависимости (17 сервисов на проверенном снимке). Это состав для проверки продуктовой аналитики, а не подтверждённая production-конфигурация. Session replay, технические логи, Temporal и остальные необязательные службы не запускаются. Все образы остаются привязаны к тем же digest; наружу по-прежнему выходят только 80/443.
+
+```bash
+python3 analyticsctl.py check-poc
+python3 analyticsctl.py up-poc
+docker compose -f docker-compose.yml -f docker-compose.security.yml -f docker-compose.images.json -f docker-compose.poc.yml ps
+curl --fail --show-error https://analytics.your-domain.net/_health
+```
+
+Первый POC-прогон с Redpanda 1 ГБ, но ещё с четырьмя веб-воркерами, прошёл первичные миграции и затем исчерпал RAM/swap при старте Granian. Ограничение до одного веб-воркера проверено через `docker compose config` и локальные тесты, но фактический повторный старт и HTTP 200 пока не проверены. После образов и первых томов на 40-ГБ VPS оставалось около 6,6 ГБ: для длительного хранения событий и локальных резервных копий увеличьте диск либо вынесите зашифрованные копии на отдельное хранилище.
 
 После `up` проверьте `docker compose -f docker-compose.yml -f docker-compose.security.yml -f docker-compose.images.json ps`. Дождитесь HTTP 200 от `https://analytics.your-domain.net/_health`: первые миграции могут идти несколько минут. Проверьте сертификат в браузере. Войдите в PostHog, создайте проект `production`, отключите в настройках проекта Autocapture и Session replay и проверьте сохранённые значения. При необходимости создайте отдельный `staging`. До приёмки не отправляйте события продукта.
 
@@ -52,6 +64,8 @@ unset POSTHOG_PROJECT_KEY
 BACKUP_DIR="backups/$(date -u +%Y%m%dT%H%M%SZ)"
 sudo python3 analyticsctl.py backup "$BACKUP_DIR"
 ```
+
+Для ограниченного POC используйте `sudo python3 analyticsctl.py backup "$BACKUP_DIR" --poc`: команда перезапустит только POC-состав. Режим записывается в манифест копии; после `restore` запускайте `python3 analyticsctl.py check-poc` и `python3 analyticsctl.py up-poc`. На текущем VPS копирование и восстановление ещё не проверены.
 
 Проверку восстановления выполняйте на **отдельной чистой VM с отдельным Docker daemon** и закрытым внешним доступом. Имя Compose-проекта в `.env` фиксировано, поэтому другой каталог на production-хосте не является изоляцией. `restore` проверяет хеши и отказывается работать при существующих контейнерах или любом существующем целевом томе. Перенесите каталог копии и тот же коммит этого репозитория на VM, затем выполните:
 

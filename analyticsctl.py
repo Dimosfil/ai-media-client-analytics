@@ -20,12 +20,15 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 VERSION = (ROOT / "POSTHOG_VERSION").read_text(encoding="utf-8").strip()
-CONFIG_FILES = [".env", "docker-compose.security.yml", "docker-compose.images.json", "image-lock.json"]
+CONFIG_FILES = [".env", "docker-compose.security.yml", "docker-compose.images.json",
+                "docker-compose.poc.yml", "image-lock.json"]
 UPSTREAM_FILES = (("docker-compose.base.yml", "docker-compose.base.yml"),
                   ("docker-compose.hobby.yml", "docker-compose.yml"),
                   (".env.services", ".env.services"))
 COMPOSE_BASE = ["docker", "compose", "-f", "docker-compose.yml", "-f", "docker-compose.security.yml"]
 COMPOSE_LOCKED = COMPOSE_BASE + ["-f", "docker-compose.images.json"]
+COMPOSE_POC = COMPOSE_LOCKED + ["-f", "docker-compose.poc.yml"]
+POC_SERVICES = ["proxy", "capture", "ingestion-general", "plugins", "feature-flags"]
 
 
 def fail(message):
@@ -118,10 +121,15 @@ def init(args):
 def ensure_checkout():
     require_command("git")
     target = ROOT / "posthog"
-    if not target.exists():
+    created = not target.exists()
+    if created:
         run("git", "clone", "--filter=blob:none", "--no-checkout", "https://github.com/PostHog/posthog.git", "posthog")
     if not (target / ".git").is_dir():
         fail("posthog/ exists but is not a Git checkout")
+    if created:
+        # --no-checkout still leaves HEAD at the remote default branch.
+        git_in_checkout("fetch", "origin", VERSION)
+        git_in_checkout("checkout", "--detach", VERSION)
     actual = git_in_checkout("rev-parse", "HEAD", capture=True, check=False).strip()
     if not actual:
         git_in_checkout("fetch", "origin", VERSION)
@@ -326,6 +334,32 @@ def up(_args):
     run(*(COMPOSE_LOCKED + ["ps"]))
 
 
+def check_poc(_args):
+    check(None)
+    values = validate_env()
+    manifest = json.loads((ROOT / "image-lock.json").read_text(encoding="utf-8"))
+    config = compose_config(COMPOSE_POC)
+    validate_config(config, manifest, values["DOMAIN"])
+    if config["services"]["web"].get("environment", {}).get("GRANIAN_WORKERS") != "1":
+        fail("POC web must run one Granian worker")
+    command = config["services"]["kafka"].get("command", [])
+    if not {"--smp 1", "--memory 1G", "--reserve-memory 256M"} <= set(command):
+        fail("POC Redpanda limits differ from the tested configuration")
+    print("POC configuration OK: digest-locked images, one web worker, only proxy publishes 80/443.")
+
+
+def up_poc(_args):
+    check_poc(None)
+    allowed = poc_service_names(compose_config(COMPOSE_POC))
+    running = set(run(*(COMPOSE_LOCKED + ["ps", "--status", "running", "--services"]),
+                      capture=True).splitlines())
+    extra = sorted(running - allowed)
+    if extra:
+        run(*(COMPOSE_LOCKED + ["stop", "--timeout", "30", *extra]))
+    run(*(COMPOSE_POC + ["up", "-d", "--no-build", "--pull", "never", *POC_SERVICES]))
+    run(*(COMPOSE_POC + ["ps"]))
+
+
 def smoke(_args):
     values = validate_env()
     project_key = os.environ.get("POSTHOG_PROJECT_KEY", "")
@@ -366,13 +400,26 @@ def all_volume_names():
     return set(result.splitlines())
 
 
-def expected_volume_names():
-    config = compose_config(COMPOSE_LOCKED)
+def poc_service_names(config):
+    selected = set(POC_SERVICES)
+    pending = list(selected)
+    while pending:
+        name = pending.pop()
+        for dependency in config["services"][name].get("depends_on", {}):
+            if dependency not in selected:
+                selected.add(dependency)
+                pending.append(dependency)
+    return selected
+
+
+def expected_volume_names(poc=False):
+    config = compose_config(COMPOSE_POC if poc else COMPOSE_LOCKED)
     if any(mount.get("type") == "volume" and not mount.get("source")
            for service in config["services"].values() for mount in service.get("volumes", [])):
         fail("Anonymous volume cannot be backed up safely")
-    names = {config["volumes"][mount["source"]]["name"] for service in config["services"].values()
-             for mount in service.get("volumes", []) if mount.get("type") == "volume"}
+    selected = poc_service_names(config) if poc else set(config["services"])
+    names = {config["volumes"][mount["source"]]["name"] for name in selected
+             for mount in config["services"][name].get("volumes", []) if mount.get("type") == "volume"}
     return names
 
 
@@ -393,7 +440,10 @@ def sha256(path):
 
 
 def backup(args):
-    check(None)
+    poc = args.poc
+    check_poc(None) if poc else check(None)
+    compose = COMPOSE_POC if poc else COMPOSE_LOCKED
+    start = compose + ["up", "-d", "--no-build", "--pull", "never"] + (POC_SERVICES if poc else [])
     if sys.platform != "linux" or os.geteuid() != 0:
         fail("Cold volume backup requires root on the Linux Docker host")
     destination = Path(args.directory).resolve()
@@ -402,10 +452,10 @@ def backup(args):
     volumes = volume_names()
     if any(not name.startswith("ai-media-analytics_") for name in volumes):
         fail("Project-labelled anonymous or foreign volume found; inspect it before backup")
-    missing = expected_volume_names() - set(volumes)
+    missing = expected_volume_names(poc) - set(volumes)
     if not volumes or missing:
         fail(f"Compose volumes missing before backup: {sorted(missing)}")
-    running = set(run(*(COMPOSE_LOCKED + ["ps", "--status", "running", "--services"]), capture=True).splitlines())
+    running = set(run(*(compose + ["ps", "--status", "running", "--services"]), capture=True).splitlines())
     if not {"web", "proxy", "db", "clickhouse"} <= running:
         fail("Core services are not running; refusing cold backup of an uncertain stack state")
     destination.mkdir(parents=True, mode=0o700)
@@ -425,7 +475,8 @@ def backup(args):
                 archive.add(volume_path(name), arcname=".")
             target.chmod(0o600)
             volume_metadata[name] = {"filename": target.name, "sha256": sha256(target)}
-        manifest = {"posthog_commit": VERSION, "created_at": dt.datetime.now(dt.timezone.utc).isoformat(),
+        manifest = {"posthog_commit": VERSION, "deployment_mode": "poc" if poc else "full",
+                    "created_at": dt.datetime.now(dt.timezone.utc).isoformat(),
                     "volumes": volume_metadata,
                     "config_sha256": {name: sha256(config / name) for name in CONFIG_FILES + ["POSTHOG_VERSION"]}}
         (destination / "manifest.json").write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -433,7 +484,7 @@ def backup(args):
     except Exception as error:
         backup_error = error
     finally:
-        restart_code = run(*(COMPOSE_LOCKED + ["up", "-d", "--no-build", "--pull", "never"]), check=False)
+        restart_code = run(*start, check=False)
     if restart_code:
         fail(f"Stack restart failed after backup (exit {restart_code}); inspect containers immediately. Backup: {destination}")
     if backup_error:
@@ -448,6 +499,9 @@ def restore(args):
     if (source / "INCOMPLETE").exists():
         fail("Backup is marked incomplete")
     manifest = json.loads((source / "manifest.json").read_text(encoding="utf-8"))
+    mode = manifest.get("deployment_mode", "full")
+    if mode not in ("full", "poc"):
+        fail("Unknown backup deployment mode")
     if manifest.get("posthog_commit") != VERSION:
         fail("Backup version differs from this bundle")
     if not manifest.get("volumes"):
@@ -478,8 +532,8 @@ def restore(args):
         if not target.exists():
             shutil.copy2(source / "config" / name, target)
     prepare(None)
-    check(None)
-    missing = expected_volume_names() - set(manifest["volumes"])
+    check_poc(None) if mode == "poc" else check(None)
+    missing = expected_volume_names(mode == "poc") - set(manifest["volumes"])
     if missing:
         fail(f"Backup is missing required Compose volumes: {sorted(missing)}")
     for name, item in manifest["volumes"].items():
@@ -495,7 +549,8 @@ def restore(args):
                 if relative.is_absolute() or ".." in relative.parts or member.isdev() or member.isfifo():
                     fail(f"Unsafe archive member in {name}")
             archive.extractall(destination, filter="tar")
-    print("Restore extracted to fresh volumes. Run check, up, then verify old and new events in UI/ClickHouse.")
+    start_command = "up-poc" if mode == "poc" else "up"
+    print(f"Restore extracted to fresh volumes. Run check, {start_command}, then verify old and new events in UI/ClickHouse.")
 
 
 def main():
@@ -505,13 +560,16 @@ def main():
     sub = parser.add_subparsers(dest="command", required=True)
     init_parser = sub.add_parser("init")
     init_parser.add_argument("--domain", required=True)
-    for name in ("prepare", "lock-images", "check", "up", "smoke"):
+    for name in ("prepare", "lock-images", "check", "up", "check-poc", "up-poc", "smoke"):
         sub.add_parser(name)
-    for name in ("backup", "restore"):
-        sub.add_parser(name).add_argument("directory")
+    backup_parser = sub.add_parser("backup")
+    backup_parser.add_argument("directory")
+    backup_parser.add_argument("--poc", action="store_true")
+    sub.add_parser("restore").add_argument("directory")
     args = parser.parse_args()
     functions = {"init": init, "prepare": prepare, "lock-images": lock_images, "check": check,
-                 "up": up, "smoke": smoke, "backup": backup, "restore": restore}
+                 "up": up, "check-poc": check_poc, "up-poc": up_poc,
+                 "smoke": smoke, "backup": backup, "restore": restore}
     try:
         functions[args.command](args)
     except (OSError, RuntimeError, ValueError, KeyError, json.JSONDecodeError) as error:

@@ -12,12 +12,56 @@ import analyticsctl as ctl
 
 
 class ComposePolicyTests(unittest.TestCase):
+    def test_fresh_upstream_clone_checks_out_pinned_commit(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "source"
+            source.mkdir()
+
+            def git(*args, cwd=None):
+                return subprocess.run(["git", *args], cwd=cwd, capture_output=True, text=True, check=True).stdout.strip()
+
+            git("init", str(source))
+            git("config", "user.email", "test@example.invalid", cwd=source)
+            git("config", "user.name", "Test", cwd=source)
+            (source / "marker").write_text("pinned", encoding="utf-8")
+            git("add", "marker", cwd=source)
+            git("commit", "-m", "pinned", cwd=source)
+            pinned = git("rev-parse", "HEAD", cwd=source)
+            (source / "marker").write_text("newer", encoding="utf-8")
+            git("commit", "-am", "newer", cwd=source)
+
+            original_run = ctl.run
+
+            def local_clone(*args, **kwargs):
+                if args[:2] == ("git", "clone"):
+                    args = (*args[:-2], str(source), args[-1])
+                return original_run(*args, **kwargs)
+
+            with (patch.object(ctl, "ROOT", root), patch.object(ctl, "VERSION", pinned),
+                  patch.object(ctl, "run", side_effect=local_clone)):
+                ctl.ensure_checkout()
+            self.assertEqual(git("rev-parse", "HEAD", cwd=root / "posthog"), pinned)
+            self.assertEqual((root / "posthog/marker").read_text(encoding="utf-8"), "pinned")
+
     def test_up_requests_only_missing_locked_images_without_build(self):
         with patch.object(ctl, "check") as verify, patch.object(ctl, "run") as run:
             ctl.up(None)
         verify.assert_called_once_with(None)
         self.assertEqual(run.call_args_list[0],
                          call(*(ctl.COMPOSE_LOCKED + ["up", "-d", "--no-build", "--pull", "missing"])))
+
+    def test_poc_up_starts_only_selected_services_with_locked_images(self):
+        config = {"services": {name: {} for name in ctl.POC_SERVICES}}
+        with (patch.object(ctl, "check_poc") as verify,
+              patch.object(ctl, "compose_config", return_value=config),
+              patch.object(ctl, "run", side_effect=["elasticsearch\n", 0, 0, 0]) as run):
+            ctl.up_poc(None)
+        verify.assert_called_once_with(None)
+        self.assertEqual(run.call_args_list[1],
+                         call(*(ctl.COMPOSE_LOCKED + ["stop", "--timeout", "30", "elasticsearch"])))
+        self.assertEqual(run.call_args_list[2],
+                         call(*(ctl.COMPOSE_POC + ["up", "-d", "--no-build", "--pull", "never", *ctl.POC_SERVICES])))
 
     def test_lock_images_selects_digest_from_matching_repository(self):
         raw = {"services": {"db": {"image": "postgres:15", "ports": [{}]},
@@ -68,6 +112,12 @@ class ComposePolicyTests(unittest.TestCase):
             locked = config("docker-compose.yml", "docker-compose.security.yml", overlay_path)
             ctl.validate_config(locked, {"source_images": source_images, "service_digests": digests}, "analytics.example.com")
             self.assertEqual(len(locked["services"]), 38)
+            poc = config("docker-compose.yml", "docker-compose.security.yml", overlay_path, "docker-compose.poc.yml")
+            ctl.validate_config(poc, {"source_images": source_images, "service_digests": digests}, "analytics.example.com")
+            self.assertEqual(poc["services"]["web"]["environment"]["GRANIAN_WORKERS"], "1")
+            self.assertIn("--memory 1G", poc["services"]["kafka"]["command"])
+            with patch.object(ctl, "compose_config", return_value=poc):
+                self.assertNotIn("ai-media-analytics_elasticsearch-data", ctl.expected_volume_names(poc=True))
         finally:
             overlay_path.unlink()
 
