@@ -25,6 +25,10 @@ OAuth uses a confidential native PostHog application with ceilings query:read an
 project:read, exact ChatGPT redirect allowlist, PKCE, consent and project selection.
 Persistent OAuth state is encrypted with a separate stable key, signed sessions use
 a separate stable signing key. Administrator setup token never enters service config.
+Client registration uses DCR. CIMD is explicitly disabled: on 2026-10-07 the VPS
+received HTTP 403 fetching https://chatgpt.com/oauth/client.json, causing
+Client Not Registered. Recreate the ChatGPT connection using DCR; do not bypass
+PKCE, exact redirect validation or user consent. Authorized tool calls remain unverified.
 Unconfigured/unauthorized access fails; query failures stay explicit, not zeros.
 
 HTTPS is served by existing Caddy via optional CADDY_EXTRA_CONFIG. Bridge binds a

@@ -51,6 +51,9 @@ def create_server(env=os.environ):
         jwt_signing_key=signing_key.encode(), allowed_client_redirect_uris=redirects,
         extra_authorize_params={'required_access_level': 'project'},
         token_endpoint_auth_method='client_secret_post', forward_pkce=True,
+        # ChatGPT CIMD metadata returns HTTP 403 from this VPS. Advertise DCR
+        # instead; keep exact redirect validation, PKCE and consent enabled.
+        enable_cimd=False,
         # The upstream token's audience is PostHog, not this proxy's MCP resource.
         forward_resource=False, require_authorization_consent=True)
     server = FastMCP('AI Media Client Analytics', auth=auth)

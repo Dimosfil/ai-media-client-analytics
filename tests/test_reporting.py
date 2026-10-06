@@ -115,8 +115,29 @@ class MCPTests(unittest.IsolatedAsyncioTestCase):
                 response = await client.get('/.well-known/oauth-authorization-server')
                 self.assertEqual(response.status_code, 200)
                 self.assertEqual(set(response.json()['scopes_supported']), {'query:read', 'project:read'})
+                self.assertFalse(response.json().get('client_id_metadata_document_supported', False))
+                self.assertEqual(response.json()['registration_endpoint'], 'https://report.example/register')
                 response = await client.post('/register', json={'redirect_uris': ['https://attacker.example/callback']})
                 self.assertGreaterEqual(response.status_code, 400)
+                response = await client.post('/register', json={
+                    'client_name': 'Synthetic DCR test',
+                    'redirect_uris': ['https://chatgpt.com/connector_platform_oauth_redirect'],
+                    'grant_types': ['authorization_code', 'refresh_token'],
+                    'token_endpoint_auth_method': 'none',
+                    'scope': 'query:read project:read'})
+                self.assertEqual(response.status_code, 201)
+                registered = response.json()
+                response = await client.get('/authorize', params={
+                    'client_id': registered['client_id'], 'response_type': 'code',
+                    'redirect_uri': 'https://chatgpt.com/connector_platform_oauth_redirect',
+                    'scope': 'query:read project:read', 'state': 'synthetic-test',
+                    'code_challenge': 'x' * 43, 'code_challenge_method': 'S256',
+                    'resource': 'https://report.example/mcp'})
+                self.assertEqual(response.status_code, 302)
+                self.assertIn('/consent', response.headers['location'])
+                response = await client.get(response.headers['location'])
+                self.assertEqual(response.status_code, 200)
+                self.assertNotIn('Client Not Registered', response.text)
 
 
 if __name__ == '__main__':
