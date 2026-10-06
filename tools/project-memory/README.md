@@ -1,6 +1,7 @@
 # Project Memory
 
 Deployment contract: [PostHog deployment](specs/posthog-deployment.md).
+Reporting contract: [scheduled analytics](specs/scheduled-analytics.md).
 
 This folder stores implementation-driving project knowledge for AI agents.
 

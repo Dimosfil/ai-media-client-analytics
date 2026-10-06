@@ -6,6 +6,8 @@ backups/
 compose/
 __pycache__/
 .local-tools/
+reporting/*.env
+reporting/.state/
 tools/project-memory/*.sqlite
 tools/project-memory/*.sqlite-*
 tools/project-memory/*.db

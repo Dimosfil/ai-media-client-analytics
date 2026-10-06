@@ -247,6 +247,7 @@ def validate_config(config, manifest, domain):
 def security_overlay(raw):
     lines = ["# Generated for the pinned PostHog Compose. Do not edit upstream snapshots.",
              "services:", "  proxy:", "    environment:", "      CADDY_HOST: ${DOMAIN}",
+             "      CADDY_EXTRA_CONFIG: ${CADDY_EXTRA_CONFIG:-}",
              "    volumes:", "      - caddy-legacy-data:/root/.caddy"]
     for name, service in sorted(raw["services"].items()):
         if name == "proxy":

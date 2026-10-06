@@ -3,6 +3,7 @@ services:
   proxy:
     environment:
       CADDY_HOST: ${DOMAIN}
+      CADDY_EXTRA_CONFIG: ${CADDY_EXTRA_CONFIG:-}
     volumes:
       - caddy-legacy-data:/root/.caddy
   capture:

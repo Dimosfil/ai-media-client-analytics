@@ -3,3 +3,6 @@ docker-compose.yml text eol=lf
 docker-compose.security.yml text eol=lf
 POSTHOG_LICENSE text eol=lf
 analyticsctl.py text eol=lf
+# Linux deployment files must survive checkout on a Windows workstation.
+reporting/*.sh text eol=lf
+reporting/*.service text eol=lf

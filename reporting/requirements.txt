@@ -1,0 +1,3 @@
+# Tested SDK interface; do not silently upgrade it during deployments.
+fastmcp==4.0.11
+tzdata==2026.2

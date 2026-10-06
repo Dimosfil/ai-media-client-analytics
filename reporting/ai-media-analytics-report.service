@@ -1,0 +1,33 @@
+[Unit]
+Description=Read-only AI Media Client analytics MCP
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=analytics-report
+Group=analytics-report
+WorkingDirectory=/opt/ai-media-analytics-report
+EnvironmentFile=/etc/ai-media-analytics-report.env
+Environment=FASTMCP_CHECK_FOR_UPDATES=false
+ExecStart=/opt/ai-media-analytics-report/.venv/bin/python -m reporting.server
+Restart=on-failure
+RestartSec=10
+TimeoutStopSec=30
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+CapabilityBoundingSet=
+ReadWritePaths=/var/lib/ai-media-analytics-report
+Environment=FASTMCP_HOME=/var/lib/ai-media-analytics-report/fastmcp
+MemoryMax=384M
+CPUQuota=50%
+
+[Install]
+WantedBy=multi-user.target
