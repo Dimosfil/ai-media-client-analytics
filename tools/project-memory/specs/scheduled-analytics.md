@@ -1,6 +1,7 @@
 # Scheduled analytics contract
 
-Status: VPS bridge and dashboards deployed; user OAuth and cloud execution unverified.
+Status: VPS bridge and dashboards deployed; user reports a successful cloud tool call
+with complete=true on 2026-10-07. Scheduled delivery, refresh and restart continuity unverified.
 Last local check: 2026-10-06. Sources: `reporting/`, `tests/test_reporting.py`,
 `POSTHOG_VERSION`; operational guide: `docs/scheduled-analytics.md`.
 
@@ -28,7 +29,8 @@ a separate stable signing key. Administrator setup token never enters service co
 Client registration uses DCR. CIMD is explicitly disabled: on 2026-10-07 the VPS
 received HTTP 403 fetching https://chatgpt.com/oauth/client.json, causing
 Client Not Registered. Recreate the ChatGPT connection using DCR; do not bypass
-PKCE, exact redirect validation or user consent. Authorized tool calls remain unverified.
+PKCE, exact redirect validation or user consent. User supplied a successful report,
+not an independently inspected scheduler execution.
 Unconfigured/unauthorized access fails; query failures stay explicit, not zeros.
 
 HTTPS is served by existing Caddy via optional CADDY_EXTRA_CONFIG. Bridge binds a
@@ -46,6 +48,12 @@ Success = success / (success + fail), cancelled/unknown separate, zero denominat
 Duration samples may include duplicate deliveries. Models are bounded to top 100 over
 the whole eight-day window. Missing coverage and sparse samples limit interpretation.
 No financial conclusions without application PostgreSQL reconciliation.
+Daily narrative follows the user journey, compares yesterday with prior day/seven-day
+mean, and labels missing measurement. Current six aggregates do NOT measure new
+visitors, registrations, connected conversion cohorts or retention. login_completed
+must never be relabeled as registration; purchase_fulfilled counts are not revenue.
+Advice separates observation, hypothesis and verification; small samples cannot
+justify causal or statistically significant claims. Prompt: reporting/daily-task-prompt.md.
 
 Panels: two dashboards/eight insights, marked ai-media-analytics-report:v1. Setup creates
 missing objects and preserves existing queries, rejects duplicate markers or unexpected
@@ -66,8 +74,8 @@ unreachable. Native OAuth app requires RS256 and persistent OIDC_RSA_PRIVATE_KEY
 FastMCP update-check setting accepts off; root-created venv must allow service-user reads.
 Encrypted reporting backup restored into a clean directory: bytes and ownership verified.
 This does NOT verify functional OAuth restoration or a full PostHog data restore.
-User grants, refresh, restart continuity, authorized cloud MCP calls and scheduled delivery
-with computer off remain unverified. See docs/reporting-deployment-2026-10-06.md.
+User reports grant/cloud call success on 2026-10-07. Refresh, restart continuity and
+scheduled delivery with computer off remain unverified. See docs/reporting-deployment-2026-10-06.md.
 
 Operator first validates 6 aggregates/8 chart sources on live API using temporary token,
 then creates panels, installs/configures OAuth bridge, connects ChatGPT personally,
