@@ -9,7 +9,7 @@ User=analytics-report
 Group=analytics-report
 WorkingDirectory=/opt/ai-media-analytics-report
 EnvironmentFile=/etc/ai-media-analytics-report.env
-Environment=FASTMCP_CHECK_FOR_UPDATES=false
+Environment=FASTMCP_CHECK_FOR_UPDATES=off
 ExecStart=/opt/ai-media-analytics-report/.venv/bin/python -m reporting.server
 Restart=on-failure
 RestartSec=10

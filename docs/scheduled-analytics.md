@@ -4,9 +4,11 @@
 
 Схема: облачная задача ChatGPT → HTTPS MCP с OAuth на VPS → Query API проекта 1 PostHog. В облако уходят агрегаты и названия моделей/провайдеров. Сырые события и идентификаторы людей не возвращаются. Анализ агрегатов выполняется в облаке OpenAI; это не полностью локальная обработка.
 
-Подготовлены два дашборда с восемью графиками, установка отдельного процесса и [промпт задачи](../reporting/daily-task-prompt.md). В этом изменении процесс **не развёрнут**, дашборды **не созданы в рабочем проекте**, облачная задача **не зарегистрирована**. Проверены локальные тесты MCP/Compose и схемы восьми графиков из закреплённого upstream. HogQL, OAuth и графики на живом API требуют проверки ниже.
+На 2026-10-06 процесс установлен и запущен на VPS, два дашборда с восемью графиками созданы в проекте 1. Шесть агрегатных запросов и восемь источников графиков выполнены на живом API; повторная установка панелей не создала дублей. HTTPS metadata возвращает 200, MCP без OAuth — 401. Подробности и границы проверки: [результаты развёртывания](reporting-deployment-2026-10-06.md).
 
-При диагностике 2026-10-06 на VPS было около 814 МиБ доступной RAM и занято 1849 из 2047 МиБ swap. Это моментальный замер, а не доказательство причины зависания UI. Перед установкой повторите `free -m`, `vmstat 1 5`, `df -h /` и `docker stats --no-stream`; сначала обеспечьте запас памяти/диска. Сервис ограничен 384 МиБ RAM и половиной одного CPU; это ограничение, а не гарантированное потребление. Шесть запросов отчёта выполняются последовательно. Новые тяжёлые проверки Django при дефиците ресурсов не запускайте.
+**Облачная задача ещё не зарегистрирована.** Пользовательский OAuth grant, refresh и вызов инструмента из ChatGPT пока не проверены. Веб-интерфейс пользователя называет раздел интеграций «Плагины»; доступность подключения собственного MCP нужно подтвердить по следующему экрану.
+
+Последний моментальный замер VPS: RAM 3921 МиБ, доступно 894 МиБ; swap 1127/2047 МиБ; свободно 5,2 ГБ диска. Reporting service использовал около 91 МиБ. Это не гарантия запаса под нагрузкой. Сервис ограничен 384 МиБ RAM и половиной одного CPU; шесть запросов выполняются последовательно.
 
 ## Панели
 
@@ -53,7 +55,35 @@ unset REPORT_SETUP_TOKEN
 
 ## 3. Подготовить OAuth без передачи токенов в промпт
 
-Выбран новый адрес `https://reports-195-209-221-217.sslip.io`; это **планируемый адрес**, его DNS/HTTPS ещё не приняты. До установки проверьте A-запись на `195.209.221.217` и исходящий/входящий ACME.
+Эта версия PostHog требует `algorithm=RS256` у OAuth application и постоянный
+`OIDC_RSA_PRIVATE_KEY` в окружении web. Security overlay передаёт ключ из `.env`.
+Если ключ ещё отсутствует, создайте его **на VPS**, сохранив `.env` в закрытой
+резервной копии перед изменением. Пример из корня рабочего PostHog:
+
+```bash
+.local-tools/report-venv/bin/python - <<'PY'
+import os
+from pathlib import Path
+from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.primitives import serialization
+from dotenv import dotenv_values, set_key
+env = Path('.env')
+if not dotenv_values(env, interpolate=False).get('OIDC_RSA_PRIVATE_KEY'):
+    key = rsa.generate_private_key(public_exponent=65537, key_size=3072)
+    pem = key.private_bytes(serialization.Encoding.PEM, serialization.PrivateFormat.PKCS8,
+                            serialization.NoEncryption()).decode()
+    set_key(str(env), 'OIDC_RSA_PRIVATE_KEY', pem.replace('\n', '\\n'))
+    env.chmod(0o600)
+PY
+docker compose -f docker-compose.yml -f docker-compose.security.yml -f docker-compose.images.json -f docker-compose.poc.yml up -d --no-build --pull never --no-deps web
+```
+
+Используйте Python из reporting venv (с установленными cryptography/python-dotenv).
+Не заменяйте существующий RSA-ключ и не печатайте PEM. Дождитесь HTTP 200
+на `/_health`: штатный web entrypoint повторяет проверки миграций и может
+запускаться несколько минут на этом VPS. Не публикуйте секрет в Compose config.
+
+Адрес `https://reports-195-209-221-217.sslip.io` работает: DNS/HTTPS и публичная OAuth metadata проверены 2026-10-06. При повторном развёртывании проверьте A-запись и доступность ACME заново.
 
 В браузере, будучи залогиненным администратором PostHog, откройте `/api/users/@me/`, возьмите числовое поле `id` вашего пользователя. Не путайте с `uuid`. Скрипт проверяет роль администратора организации и наличие scope ceilings в реальном runtime; при несовместимости он останавливается. Не заменяйте его приложением с широкими правами.
 
@@ -62,6 +92,7 @@ read -rp 'PostHog owner numeric id: ' REPORT_OWNER_USER_ID
 docker exec -i -u 0 \
   -e REPORT_OWNER_USER_ID="$REPORT_OWNER_USER_ID" \
   -e REPORT_PROJECT_ID=1 \
+  -e REPORT_SET_PROJECT_TIMEZONE=Europe/Moscow \
   -e REPORT_POSTHOG_ORIGIN=https://analytics-195-209-221-217.sslip.io \
   -e REPORT_PUBLIC_ORIGIN=https://reports-195-209-221-217.sslip.io \
   -e REPORT_BOOTSTRAP_OUTPUT=/tmp/analytics-report-bootstrap.env \
@@ -125,7 +156,7 @@ curl --fail --show-error https://analytics-195-209-221-217.sslip.io/_health
 
 ## 5. Подключить к ChatGPT и создать облачную задачу
 
-В ChatGPT включите доступную вашему аккаунту настройку developer mode/custom MCP, добавьте HTTPS MCP `https://reports-195-209-221-217.sslip.io/mcp` с **OAuth**. Настройку приложения может ограничивать план/политика аккаунта. Завершите OAuth лично, проверьте scopes и выбранный проект. Не вставляйте personal API key, `phc_...`, SSH-ключ или содержимое env в промпт задачи. Если UI просит OAuth client ID/secret для регистрации клиента самого MCP, не подставляйте upstream PostHog secret: мост предоставляет dynamic client registration.
+В веб ChatGPT откройте Настройки → Плагины (название на скриншоте пользователя). Найдите доступное подключение собственного MCP; наличие Developer mode в этом интерфейсе пока не подтверждено. Если оно доступно, добавьте HTTPS MCP `https://reports-195-209-221-217.sslip.io/mcp` с **OAuth**. Настройку приложения может ограничивать план/политика аккаунта. Завершите OAuth лично, проверьте scopes и выбранный проект. Не вставляйте personal API key, `phc_...`, SSH-ключ или содержимое env в промпт задачи. Если UI просит OAuth client ID/secret для регистрации клиента самого MCP, не подставляйте upstream PostHog secret: мост предоставляет dynamic client registration.
 
 В новом облачном чате с этим подключением сначала попросите вызвать `analytics_daily_report` и `analytics_dashboard_links`. Убедитесь, что пришли реальные агрегаты проекта 1, `complete=true` и рабочие ссылки. В инструменте всего два чтения; он не принимает SQL, project ID или имена полей от модели.
 

@@ -22,6 +22,8 @@ def main():
     output = Path(os.environ['REPORT_BOOTSTRAP_OUTPUT'])
     if output.exists():
         raise RuntimeError('Bootstrap output exists; refusing secret replacement')
+    if not os.environ.get('OIDC_RSA_PRIVATE_KEY'):
+        raise RuntimeError('Configure a persistent OIDC_RSA_PRIVATE_KEY on PostHog web before registering OAuth')
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'posthog.settings')
     import django
     django.setup()
@@ -54,8 +56,12 @@ def main():
             raise RuntimeError('OAuth app already exists; use the preserved secret or explicitly rotate it')
         app = OAuthApplication.objects.create(name=app_name, organization=team.organization, user=owner,
             client_type='confidential', authorization_grant_type='authorization-code',
+            algorithm='RS256',
             client_secret=client_secret, redirect_uris=origin + '/auth/callback',
             scopes=['query:read', 'project:read'])
+        if os.environ.get('REPORT_SET_PROJECT_TIMEZONE') == 'Europe/Moscow':
+            team.timezone = 'Europe/Moscow'
+            team.save(update_fields=['timezone'])
         settings['REPORT_OAUTH_CLIENT_ID'] = app.client_id
         fd = os.open(output, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
         try:

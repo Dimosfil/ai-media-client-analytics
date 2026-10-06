@@ -257,6 +257,8 @@ def security_overlay(raw):
             changes.append("    ports: !reset []")
         if service.get("build"):
             changes.append("    build: !reset null")
+        if name == "web":
+            changes.extend(["    environment:", "      OIDC_RSA_PRIVATE_KEY: ${OIDC_RSA_PRIVATE_KEY:-}"])
         if name == "db":
             changes.extend(["    volumes:",
                             "      - ./posthog/docker/postgres-init-scripts:/docker-entrypoint-initdb.d:ro",

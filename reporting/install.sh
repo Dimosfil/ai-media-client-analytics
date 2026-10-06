@@ -21,6 +21,8 @@ fi
 install -m 644 reporting/*.py reporting/requirements.txt /opt/ai-media-analytics-report/reporting/
 python3 -m venv /opt/ai-media-analytics-report/.venv
 /opt/ai-media-analytics-report/.venv/bin/python -m pip install --disable-pip-version-check -r reporting/requirements.txt
+# umask 077 protects credentials, but installed code must be readable by the service user.
+chmod -R a+rX /opt/ai-media-analytics-report/.venv
 install -m 644 reporting/ai-media-analytics-report.service /etc/systemd/system/ai-media-analytics-report.service
 systemctl daemon-reload
 echo 'Installed. Service is not started: configure private bind address, OAuth and HTTPS first.'

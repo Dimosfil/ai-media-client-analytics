@@ -1,6 +1,6 @@
 # Scheduled analytics contract
 
-Status: preparation implemented, production deployment and cloud execution unverified.
+Status: VPS bridge and dashboards deployed; user OAuth and cloud execution unverified.
 Last local check: 2026-10-06. Sources: `reporting/`, `tests/test_reporting.py`,
 `POSTHOG_VERSION`; operational guide: `docs/scheduled-analytics.md`.
 
@@ -9,7 +9,7 @@ Last local check: 2026-10-06. Sources: `reporting/`, `tests/test_reporting.py`,
 - This repository owns PostHog infrastructure, the aggregate bridge and managed panels.
 - AI Media Client source is not changed here. Event collection uses its existing catalog.
 - PostHog project 1, HTTPS analytics-195-209-221-217.sslip.io.
-- Target reporting endpoint reports-195-209-221-217.sslip.io/mcp is planned, not deployed.
+- Reporting endpoint reports-195-209-221-217.sslip.io/mcp is deployed; unauthenticated access returns 401.
 - ChatGPT cloud task, every day 09:00 Europe/Moscow, same chat for all reports.
   Local Codex automations do not satisfy independence from a running computer.
 - Cloud model receives aggregates, not raw identities/event payloads. This is explicitly
@@ -55,9 +55,15 @@ Local tests verify API response failure handling, no cross-origin pagination, ti
 boundaries, fixed MCP schemas, HTTP 401 without auth, OAuth discovery and redirect
 rejection, idempotent setup preserving existing panels, and existing Compose policies.
 All eight queries validate against pinned upstream Pydantic schema.
-Live HogQL execution, creation of panels, Linux installation, reverse proxy,
-project-scoped OAuth grants, refresh, restart continuity, private-state restoration and
-cloud task execution with computer off remain unverified. Do not label them successful.
+Live verification 2026-10-06: six aggregates/eight chart sources passed; two dashboards
+(IDs 2, 3) and eight insights created with idempotency/membership checked. Linux systemd
+service active; HTTPS metadata 200, unauthenticated MCP 401, private port externally
+unreachable. Native OAuth app requires RS256 and persistent OIDC_RSA_PRIVATE_KEY on web.
+FastMCP update-check setting accepts off; root-created venv must allow service-user reads.
+Encrypted reporting backup restored into a clean directory: bytes and ownership verified.
+This does NOT verify functional OAuth restoration or a full PostHog data restore.
+User grants, refresh, restart continuity, authorized cloud MCP calls and scheduled delivery
+with computer off remain unverified. See docs/reporting-deployment-2026-10-06.md.
 
 Operator first validates 6 aggregates/8 chart sources on live API using temporary token,
 then creates panels, installs/configures OAuth bridge, connects ChatGPT personally,
