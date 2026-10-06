@@ -181,6 +181,9 @@ gi test task
 ги тест таск
 gi test
 ги тест
+gi test start
+ги тест старт
+gi full test
 gi tm
 gi active task
 gi next task
@@ -265,8 +268,10 @@ the listed commands.
 | `gi start sprint`, `gi старт спринт` | Take the active Sprint/Cycle into work through the configured task manager. |
 | `gi local sprint`, `gi sprint local`, `gi локальный спринт`, `gi спринт локально` | Run a local sprint checklist without task manager or config-service sync. |
 | `gi test plan`, `gi тест-план` | Build a verification plan from current project contracts. |
-| `gi test task`, `ги тест таск` | Set the active release/full-system verification task for the current project. |
-| `gi test`, `ги тест` | Run the documented full project verification flow against the active test task. |
+| `gi test task`, `ги тест таск` | Select the active project-local scenario or workload. |
+| `gi test`, `ги тест` | Explain the tester, local scenarios, settings, and gaps without running. |
+| `gi test start`, `ги тест старт` | Execute the selected local scenario with evidence, checkpoints, and restoration. |
+| `gi full test`, `gi release test`, `gi system test` | Run documented full-system verification. |
 | `gi git summary`, `gi гит-обзор` | Summarize the latest git commit without printing a full diff. |
 | `gi commit`, `gi коммит` | Commit scoped changes. |
 | `gi push`, `gi пуш` | Commit and push scoped changes. |
@@ -1140,11 +1145,18 @@ gi пул            # fetch + pull текущей ветки
 ```
 
 Перед любым commit/push агент проверяет `git status --short`, staged/unstaged
-changes, remote и ветку. Коммитит только изменения текущей задачи или
-явно указанного scope. Scope берётся только из активной задачи текущего диалога
-или явно выбранного пользователем набора изменений; видимое сходство dirty-файлов
-не позволяет объявлять их одним пакетом. При неоднозначном scope агент
-останавливается до staging и любых записей. `gi пуш` нельзя подменять сырым `git push`, повтором
+changes, remote и ветку. Scope определяется по порядку: явно выбранные изменения,
+активная задача текущего диалога, затем scope самостоятельной команды. Если
+выбранных файлов и активной задачи нет, `gi коммит`, `gi пуш` и `gi коммит пуш`
+(включая английские алиасы) выбирают все текущие допустимые tracked/untracked
+изменения проверенного репозитория, включая ранее сделанные пользователем.
+Это действует и в новом чате: отсутствие истории или большое число файлов
+не требуют вопроса «включить все или выбранные?». Агент проверяет изменения,
+кратко сообщает scope и исключения; секреты, запрещённый контент, generated noise
+и явно отложенная отдельная работа остаются вне коммита. Активную задачу нельзя
+расширять по сходству dirty-файлов. Уточнение требуется только при конкретном
+противоречии scope или невозможности отделить исключённые изменения.
+`gi только пуш` не выбирает файлы working tree. `gi пуш` нельзя подменять сырым `git push`, повтором
 предыдущего terminal push или push-only действием; если scoped изменений для
 commit нет, агент сообщает это вместо push-only fallback. Push без нового
 commit выполняется только по `gi только пуш`. Git-finish сам по себе не
@@ -1239,24 +1251,77 @@ authoritative command contract.
 Для новой фичи: expected behavior, failure paths, edge cases, rollback, что
 проверено, что требует ручной проверки.
 
+### Project Tester Information And Start
+
+```text
+gi test
+ги тест
+gi test start [scenario/task]
+ги тест старт [сценарий/задача]
+```
+
+`gi test` loads the shared tester rule and the current project's canonical
+testing entrypoint. Explain available scenarios, modes, effective settings,
+required content and its availability, prerequisites, input/action policies,
+evidence locations, known gaps, and the
+start command. This is informational: do not run checks, start apps, reset
+state, open UI, or write settings/reports.
+
+`gi test start` executes the scenario selected in the current message, active
+chat task, or documented project-local selection/default. Ask a focused
+question only when selection remains ambiguous or a required contract is
+missing. Verify exact runtime details from current local sources.
+
+Each project owns scenarios, modes, settings, URLs/ports, roles, fixtures,
+commands, expected results, environment gates, and evidence/backup paths.
+When a test needs content entry, the local contract maps authorized supplied
+material, approved fixtures, or permitted synthetic input to case/field IDs.
+Validate relevant constraints, enter through the required UI/API surface,
+confirm parsing/upload and acceptance, and track introduced records/files
+through cleanup or retention. Missing real content limits its dependent cases;
+invented IDs, links, or unrelated personal material are not substitutes.
+The shared rule supplies scope and authorization boundaries, durable backup,
+stable case IDs, current final results, bounded retries, batch checkpoints,
+freshness checks on resume, privacy, restoration, and honest coverage reporting.
+Use `templates/PROJECT_TESTING.template.md` as an optional authoring scaffold;
+it does not install a runner or configure a scenario.
+
+An observational scenario follows its local backup/restoration contract.
+Full-system reset applies only to an explicit full-system flow. A test-start
+request authorizes UI interaction needed for its selected scenario, within
+applicable tool and access rules. Paid, destructive, external-send, and unrelated
+actions still need their applicable explicit authorization; reuse authorization
+already given for the same target and scope.
+
+Save run evidence and checkpoints at project-approved locations, keep private
+backup separately, and verify restoration after persistence. Distinguish
+observed actions from measured network/effect counts; unobserved counts are
+unknown. Run state is `complete`, `incomplete`, `blocked`, or
+`restoration-required`; discovered defects are reported separately. An estimate,
+mocked check, or historical result does not prove execution outside its scope.
+Authoritative runtime rule: `patterns/AGENTS_RUNTIME/09-testing.md`.
+
 ### Full Project Test
 
 ```text
-gi test task <release/full-system test task>
-ги тест таск <release/full-system test task>
-gi test
-ги тест
+gi test task <scenario or full-system test task>
+ги тест таск <сценарий или задача полного теста>
+gi full test
+gi release test
+gi system test
 ```
 
 `gi test task` sets the active verification workload for the current project.
-The task text is the selected scenario for the next `gi test`, not proof that
-the scenario has already passed. Use the project-local test-task location when
+The task text selects a scenario for `gi test start` or a full-system run;
+it does not prove a passed test. Use the project-local test-task location when
 local instructions define one; otherwise keep the task in current chat context
 and say where it is tracked.
 
-`gi test` runs the documented full verification flow against the active test
+`gi full test` runs the documented full verification flow against the active test
 task. It is different from `gi test plan`: `gi test plan` plans by default,
-while `gi test` runs. Before running, the agent rereads current local
+while `gi full test` runs. The same flow applies to `gi test start` only when
+the selected scenario explicitly requires full-system verification. Before
+running, the agent rereads current local
 instructions, README, manifests, runbooks, test configs, and source entry
 points needed to verify exact commands, services, app set, ports, routes,
 payloads, environment, storage, auth, queues, workers, and health checks.
@@ -1271,12 +1336,13 @@ running a dirty-state test.
 After reset, selected chain/preset/execution mode, ports, task, and service
 endpoints must be read from the project-local source of truth such as config
 files, backend state, service discovery, or database metadata. Browser
-`localStorage` is only UI cache; it cannot be the source of truth for `gi test`.
+`localStorage` is only UI cache; it cannot be the source of truth for a
+full-system run.
 
-For `gi test`, dry-run mode is not a valid result. Do not report `--dry-run`,
+For `gi full test`, dry-run mode is not a valid result. Do not report `--dry-run`,
 simulation mode, dispatcher-only execution, replayed logs, mock-only runs, or
-compile/unit-only checks as a passed `gi test`, and do not run dry-run mode at
-all unless the user explicitly asks for that diagnostic mode. A full test must
+compile/unit-only checks as a passed full-system test. Run dry-run mode only
+when the user explicitly asks for that diagnostic mode. A full test must
 exercise the documented live runtime surface for the selected task: apps,
 backend/API, storage, queues/workers, UI/auth, service discovery, orchestrator
 or agent handoff loops, and health/contract endpoints when the project defines
@@ -1284,8 +1350,9 @@ them. If the live system cannot be started or reached, report the full test as
 blocked or not checked.
 
 Old summaries, screenshots, completed demo artifacts, previous task statuses,
-and old chat snippets are evidence only. They do not satisfy a fresh `gi test`
+and old chat snippets are evidence only. They do not satisfy a fresh full-system
 request; rerun the current documented checks or report the exact blocker.
+Authoritative runtime rule: `patterns/AGENTS_RUNTIME/09-full-testing.md`.
 
 ### Full Project Refactor
 

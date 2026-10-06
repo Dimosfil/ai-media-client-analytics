@@ -1,5 +1,5 @@
 {
-  "instruction_kit_version": "2026.09.29.1",
+  "instruction_kit_version": "2026.10.03.3",
   "source": "https://github.com/Dimosfil/general-instructions.git",
   "installed_at": "2026-09-29T16:08:46.4440966+03:00",
   "config_service": {
@@ -85,12 +85,15 @@
     "tools/resolve-gi-command.ps1",
     "tools/select-git-commit-languages.ps1",
     "tools/select-project-language.ps1",
-    "tools/select-system-language.ps1"
+    "tools/select-system-language.ps1",
+    "patterns/AGENTS_RUNTIME/09-full-testing.md",
+    "templates/PROJECT_TESTING.template.md"
   ],
   "migration_state": {
     "schema_version": 2,
-    "applied_through": "2026.09.29.1__clarify_gi_push_project_rules_and_upstream",
+    "applied_through": "2026.10.03.3__add_project_test_content_contract",
     "additional_applied_migrations": [],
     "skipped_migrations": []
-  }
+  },
+  "last_update_check_at": "2026-10-06T14:54:43+03:00"
 }

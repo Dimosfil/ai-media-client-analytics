@@ -1,5 +1,34 @@
 ## Build And Installer Packaging
 
+### Build Output And Git Boundaries
+
+- Generate applications, frontend bundles, installers, and intermediate output
+  in dedicated project-local directories separate from maintained source.
+  Follow the documented layout or use `build/`, `dist/`, or
+  `artifacts/<platform>/`; keep paths configurable and target platforms separate.
+- Ignore output directories before generation. Do not add, stage, commit, or
+  push rebuildable output to source Git. Version source, required source assets,
+  manifests, lockfiles, build configuration, and build/packaging scripts so a
+  clean checkout can reproduce output with documented prerequisites.
+- Classify by build configuration and contents, not names/extensions alone.
+  Preserve maintained inputs in mixed public/static directories. Generated code,
+  database migrations, and required vendored files are not automatically output.
+- During authorized cleanup, update generation and affected run/package/deploy
+  paths together. Ignore confirmed tracked output and remove only those paths
+  from the index with `git rm -r --cached -- <path>`, preserving local files and
+  unrelated staged/user changes. Ignore rules alone do not stop tracking.
+  Commit these scoped index removals through the authorized Git workflow;
+  do not delete local artifacts or rewrite history.
+- Ensure startup/deployment builds or retrieves required artifacts before use.
+  When establishing or changing this workflow, verify clean-checkout generation,
+  affected consumers, ignored new output, and no tracked output. Report
+  unavailable checks; record paths/commands in project docs and relevant memory.
+- Publish artifacts through authorized deployment or artifact/release storage.
+  Git exclusion must not omit required deployment files. Versioning output
+  requires an explicit approved project exception naming paths and storage.
+
+### Build And Packaging Commands
+
 - Apply the project-local `config_service.enabled` toggle from
   `08-config-service.md` to every operation below. Query or write
   config-service only when integration is effectively enabled. When disabled,

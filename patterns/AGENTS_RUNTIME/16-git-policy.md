@@ -26,11 +26,18 @@ and project commit-message language preferences.
   implementation task. Perform only the requested Git operation and the
   compact Git safety checks below, unless a more specific project-local rule
   expressly requires another finish-time check.
-- Treat Git finish as finalization of an already established scope, not as a new
-  implementation or repair task. Resolve scope only from the active conversation
-  task or explicit user-selected changes; never classify the whole dirty
-  worktree as one package from apparent similarity. If scope is ambiguous, stop
-  before staging or writes and ask what to include.
+- Treat Git finish as finalization, not as a new implementation or repair task.
+  Use explicit user-selected changes first, then the active conversation task.
+  If neither exists, a standalone `gi commit`, `gi push`, or `gi commit push`
+  (including Russian aliases) selects the current repository's eligible tracked
+  and untracked changes. This command-defined scope also applies in a new chat;
+  do not ask whether to include all changes merely because chat history is absent
+  or many files are dirty. Inspect the changes before staging, exclude secrets,
+  prohibited content, generated noise, and known separately reserved work, and
+  briefly report the selected scope and exclusions. Within an active task,
+  never classify the whole dirty worktree as one package from apparent similarity.
+  Ask only when a concrete conflicting scope instruction or inseparable excluded
+  change prevents safe selection. `gi only push` never selects working-tree files.
 - A failed finish-time check does not by itself authorize product fixes, test
   rewrites, runtime-state deletion, dependency changes, service restarts, or
   broad cleanup. Correct only failures caused by the scoped work when the fix is
@@ -44,3 +51,12 @@ and project commit-message language preferences.
   leave unrelated prohibited content unstaged and report it. Proceed only when
   the user explicitly approves an exact project-specific exception and storage
   approach.
+- Exclude rebuildable application builds, frontend bundles, installers, and
+  intermediate build output from staging and commits, including changes to
+  already tracked output; allow scoped index removals from authorized cleanup.
+  Keep output in dedicated ignored directories;
+  retain source, build configuration, and dependency lockfiles in Git. Follow
+  `patterns/AGENTS_RUNTIME/09-build-and-install.md` for authorized layout and
+  tracking cleanup. Git finish alone does not authorize that cleanup; generated
+  source and database migrations are not automatically build artifacts. An
+  exception requires explicit approval of the exact output and storage approach.

@@ -401,7 +401,7 @@
         "gi пул",
         "ги пул"
       ],
-      "contract": "Perform only the requested Git finish or pull operation on an established scope with compact status, scope, secret, and remote checks; do not start project-memory auditing, implementation, product testing, or runtime cleanup.",
+      "contract": "Perform only the requested Git finish or pull operation with compact status, scope, secret, and remote checks. For commit commands, use explicit selection, then active task scope, otherwise standalone repository scope including eligible current changes in a new chat; do not ask solely because chat history is absent. Do not start project-memory auditing, implementation, product testing, or runtime cleanup.",
       "context_files": [
         "patterns/AGENTS_RUNTIME/16-git-policy.md"
       ]
@@ -454,7 +454,7 @@
         "gi задача теста",
         "ги задача теста"
       ],
-      "contract": "Set the active release/full-system verification workload for the next documented gi test run.",
+      "contract": "Set the active project-local scenario or workload for gi test start; selection does not execute or pass a test.",
       "context_files": [
         "patterns/AGENTS_RUNTIME/09-testing.md",
         "patterns/AGENTS_RUNTIME/15-verification.md"
@@ -463,15 +463,42 @@
     {
       "id": "test",
       "aliases": [
-        "gi full test",
-        "gi release test",
-        "gi system test",
+        "gi testing",
+        "gi тест",
         "gi test",
         "ги тест"
+      ],
+      "contract": "Explain the shared tester and current project-local scenarios, settings, prerequisites, evidence paths, gaps, and start command; do not execute tests or mutate runtime state.",
+      "context_files": [
+        "patterns/AGENTS_RUNTIME/09-testing.md"
+      ]
+    },
+    {
+      "id": "test-start",
+      "aliases": [
+        "gi testing start",
+        "gi test start",
+        "gi тест старт",
+        "ги тест старт"
+      ],
+      "contract": "Execute the selected project-local test scenario with its effective settings, authorization, checkpoints, evidence, restoration, and required verification gates.",
+      "context_files": [
+        "patterns/AGENTS_RUNTIME/09-testing.md",
+        "patterns/AGENTS_RUNTIME/12-ui-and-focus.md",
+        "patterns/AGENTS_RUNTIME/15-verification.md"
+      ]
+    },
+    {
+      "id": "test-full",
+      "aliases": [
+        "gi full test",
+        "gi release test",
+        "gi system test"
       ],
       "contract": "Execute the documented release/full-system verification task against live required surfaces and report exact gaps.",
       "context_files": [
         "patterns/AGENTS_RUNTIME/09-testing.md",
+        "patterns/AGENTS_RUNTIME/09-full-testing.md",
         "patterns/AGENTS_RUNTIME/09-runtime-and-defaults.md",
         "patterns/AGENTS_RUNTIME/12-ui-and-focus.md",
         "patterns/AGENTS_RUNTIME/15-verification.md"

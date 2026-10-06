@@ -52,6 +52,10 @@ TODO: describe the product, users, and primary runtime surface.
   audio, datasets, archives, or similar large content payloads. Use approved
   artifact storage and commit compact manifests, checksums, sources, or
   retrieval instructions unless the exact exception is explicitly approved.
+- Keep rebuildable build output in dedicated ignored directories and out of
+  source Git; version build inputs. Follow
+  `patterns/AGENTS_RUNTIME/09-build-and-install.md` for authorized cleanup,
+  index removal that preserves local files, and clean-checkout checks.
 - `tools/` is for durable reusable development and agent tooling. Product code,
   tests, docs, outputs, screenshots, exports, downloaded data, build bundles,
   and one-off probes belong in documented project locations.
@@ -78,7 +82,8 @@ TODO: describe the product, users, and primary runtime surface.
 - Startup/restore: `07-startup.md`; scope/evidence/cleanup: `07-scope-and-evidence.md`
 - Config: `08-config-service.md`; task manager: `08-task-manager.md`; sprints: `08-sprint.md`
 - Publication: `09-production.md`; deploy: `09-deploy-gateway.md`; FTP: `09-ftp.md`
-- Runtime/restart/defaults: `09-runtime-and-defaults.md`; tests: `09-testing.md`
+- Runtime/restart/defaults: `09-runtime-and-defaults.md`; tester: `09-testing.md`
+- Full-system verification: `09-full-testing.md`
 - Build/install: `09-build-and-install.md`; memory operations: `09-project-memory-operations.md`
 - Private/missing context: `10-private-scope-and-missing-context.md`
 - Language: `11-language-preferences.md`; UI: `12-ui-and-focus.md`; progress: `13-progress-updates.md`
