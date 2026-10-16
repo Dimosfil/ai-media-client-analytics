@@ -2,6 +2,8 @@
 
 Deployment contract: [PostHog deployment](specs/posthog-deployment.md).
 Reporting contract: [scheduled analytics](specs/scheduled-analytics.md).
+UX reporting: [UX daily report](specs/ux-daily-report.md).
+Connected sources: [connected projects](specs/integration-contracts/connected-projects.md).
 
 This folder stores implementation-driving project knowledge for AI agents.
 

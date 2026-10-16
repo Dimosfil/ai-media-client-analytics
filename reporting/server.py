@@ -2,7 +2,9 @@
 import asyncio
 import json
 import os
-from datetime import date, datetime, timedelta
+import re
+from datetime import date, datetime, timedelta, timezone
+from time import monotonic
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -16,6 +18,8 @@ from key_value.aio.wrappers.encryption import FernetEncryptionWrapper
 
 from reporting.posthog import PostHog
 from reporting.queries import queries, report_metadata
+from reporting.aggregate_safety import LEGACY_FIELDS, LEGACY_LIMITS, validate_rows
+from reporting.ux_report import collect as collect_ux
 
 
 def create_server(env=os.environ):
@@ -59,6 +63,14 @@ def create_server(env=os.environ):
     server = FastMCP('AI Media Client Analytics', auth=auth)
     semaphore = asyncio.Semaphore(1)
     links = json.loads(env.get('REPORT_DASHBOARD_LINKS', '{}'))
+    if not isinstance(links, dict):
+        raise ValueError('REPORT_DASHBOARD_LINKS must be an object')
+    links.setdefault('ux', f'{origin}/project/{project_id}/dashboard/4')
+    if set(links) - {'overview', 'journey', 'ux'} or any(
+            not isinstance(value, str) or not re.fullmatch(
+                re.escape(origin) + rf'/project/{project_id}/dashboard/[1-9][0-9]*', value)
+            for value in links.values()):
+        raise ValueError('Use saved dashboard URLs for the configured PostHog project')
 
     @server.tool(annotations={'readOnlyHint': True, 'destructiveHint': False,
                              'openWorldHint': False}, timeout=300)
@@ -67,6 +79,9 @@ def create_server(env=os.environ):
 
         report_day is an optional ISO date in the configured timezone, at most
         30 days old. Contains no event payloads, visitor/account IDs or arbitrary SQL.
+        Includes five schema-v2 UX blocks, separated user/release, user/debug and
+        admin populations. Check ux.coverage independently of legacy complete.
+        Linked cohorts use 48-hour observation windows; immature is not failure.
         Empty datasets and missing coverage must be reported explicitly.
         """
         today = datetime.now(ZoneInfo(zone)).date()
@@ -78,13 +93,32 @@ def create_server(env=os.environ):
             raise RuntimeError('OAuth authentication is required')
         client = PostHog(origin, project_id, token.token)
         end = selected + timedelta(days=1)
-        result = {'metadata': report_metadata(end, zone), 'dashboards': links, 'data': {}, 'errors': {}}
+        result = {'metadata': report_metadata(end, zone), 'dashboards': links, 'data': {}, 'errors': {},
+                  'query_coverage': {}}
+        as_of = datetime.now(timezone.utc)
+        deadline = monotonic()+270
         async with semaphore:
             for name, sql in queries(end, zone=zone).items():
                 try:
-                    result['data'][name] = await asyncio.to_thread(client.query, sql)
-                except RuntimeError as exc:
-                    result['errors'][name] = str(exc)
+                    remaining = deadline-monotonic()
+                    if remaining <= 1:
+                        raise RuntimeError('Query budget exhausted')
+                    client.timeout = min(45,remaining)
+                    rows = await asyncio.to_thread(client.query, sql)
+                    result['data'][name] = validate_rows(rows, LEGACY_FIELDS[name], LEGACY_LIMITS[name])
+                    truncated = bool(getattr(rows, 'truncated', False) or len(rows) >= LEGACY_LIMITS[name]
+                                     and name not in ('account_users', 'freshness'))
+                    result['query_coverage'][name] = {
+                        'status': 'available' if rows else 'available_empty',
+                        'truncated': truncated, 'limit': LEGACY_LIMITS[name],
+                        'period': result['metadata']['aggregate_periods'][name],
+                    }
+                except (RuntimeError, ValueError):
+                    # Exception messages can include upstream SQL or private values.
+                    result['errors'][name] = 'Aggregate query unavailable or invalid'
+                    result['query_coverage'][name] = {'status': 'unavailable', 'truncated': None,
+                        'limit': LEGACY_LIMITS[name], 'period': result['metadata']['aggregate_periods'][name]}
+            result['ux'] = await collect_ux(client,end,as_of,zone,deadline)
         result['complete'] = not result['errors']
         return result
 

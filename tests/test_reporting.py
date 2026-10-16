@@ -8,11 +8,48 @@ from unittest.mock import patch
 
 from reporting.dashboards import definitions
 from reporting.posthog import PostHog
-from reporting.queries import EVENTS, interval, queries
+from reporting.queries import EVENTS, interval, queries, report_metadata
+from reporting.aggregate_safety import LEGACY_FIELDS, LEGACY_LIMITS, validate_rows
 from reporting.setup_dashboards import create_dashboards, list_all
 
 
 class QueryTests(unittest.TestCase):
+    def test_explicit_periods_and_collection_warning(self):
+        metadata = report_metadata(date(2026, 10, 10), 'Europe/Moscow')
+        self.assertEqual(metadata['report_day'], '2026-10-09')
+        self.assertEqual(metadata['previous_day'], '2026-10-08')
+        self.assertEqual(metadata['periods']['report_day']['start'], '2026-10-08T21:00:00+00:00')
+        self.assertEqual(metadata['periods']['baseline']['start'], '2026-10-01T21:00:00+00:00')
+        self.assertEqual(metadata['periods']['baseline']['end_exclusive'], '2026-10-08T21:00:00+00:00')
+        self.assertEqual(set(metadata['aggregate_periods']), set(queries(date(2026, 10, 10))))
+        self.assertIn('debug_assumed', ' '.join(metadata['warnings']))
+        self.assertIn('2026-10-09', ' '.join(metadata['warnings']))
+        self.assertNotIn('Only explicitly captured consented', ' '.join(metadata['warnings']))
+
+    def test_raw_columns_and_nonfinite_metrics_cannot_pass(self):
+        row = {'day': '2026-10-09', 'event': 'model_selected', 'deliveries': 2,
+               'events': 1, 'identities': 1}
+        self.assertEqual(validate_rows([row], LEGACY_FIELDS['daily_events'], 400), [row])
+        for key in ('distinct_id', 'session_id', 'flow_id', 'attempt_id', 'generation_id',
+                    'prompt', 'search_query', 'error', 'account_id', 'task_id', 'url'):
+            with self.assertRaises(ValueError):
+                validate_rows([{**row, key: 'private-value'}], LEGACY_FIELDS['daily_events'], 400)
+        for value in (float('nan'), float('inf'), -1, True, 'private-value'):
+            with self.assertRaises(ValueError):
+                validate_rows([{**row, 'events': value}], LEGACY_FIELDS['daily_events'], 400)
+
+    def test_upstream_truncation_is_preserved(self):
+        client = PostHog('https://posthog.example', 1, 'synthetic-token')
+        with patch.object(client, 'request', return_value={
+                'columns': ['n'], 'results': [[1]], 'hasMore': True}):
+            self.assertTrue(client.query('SELECT count() AS n FROM events').truncated)
+
+    def test_empty_result_with_wrong_columns_is_not_valid_coverage(self):
+        client = PostHog('https://posthog.example',1,'synthetic-token')
+        with patch.object(client,'request',return_value={'columns':['distinct_id'],'results':[]}):
+            with self.assertRaises(ValueError):
+                validate_rows(client.query('SELECT count() AS active_accounts'),LEGACY_FIELDS['account_users'],1)
+
     def test_moscow_calendar_midnight(self):
         start, end = interval(date(2026, 10, 7), 1, 'Europe/Moscow')
         self.assertEqual(start.isoformat(), '2026-10-05T21:00:00+00:00')
@@ -67,6 +104,43 @@ class SetupTests(unittest.TestCase):
 
 
 class MCPTests(unittest.IsolatedAsyncioTestCase):
+    async def test_synthetic_ux_through_public_tool_and_independent_complete(self):
+        from cryptography.fernet import Fernet
+        from fastmcp import Client
+        from fastmcp.server.auth import AccessToken
+        from reporting.server import create_server
+        from test_ux_reporting import AS_OF,full_path
+        from ux_sqlite import SyntheticPostHog
+        database = SyntheticPostHog(full_path())
+        def query(sql):
+            if sql.startswith('WITH periods AS') or 'raw_events' in sql:
+                return database.query(sql)
+            return []
+        with tempfile.TemporaryDirectory() as directory:
+            env = {'REPORT_POSTHOG_ORIGIN':'https://posthog.example','REPORT_PUBLIC_ORIGIN':'https://report.example',
+                   'REPORT_PROJECT_ID':'1','REPORT_OAUTH_CLIENT_ID':'synthetic-client','REPORT_OAUTH_CLIENT_SECRET':'synthetic',
+                   'REPORT_SIGNING_KEY':'x'*48,'REPORT_STORAGE_KEY':Fernet.generate_key().decode(),'REPORT_STATE_DIR':directory,
+                   'REPORT_REDIRECT_URIS':'["https://chatgpt.com/connector_platform_oauth_redirect"]',
+                   'REPORT_DASHBOARD_LINKS':'{"overview":"https://posthog.example/project/1/dashboard/2","journey":"https://posthog.example/project/1/dashboard/3"}'}
+            async with Client(create_server(env)) as client:
+                token=AccessToken(token='synthetic-token',client_id='synthetic',scopes=['query:read','project:read'])
+                with patch('reporting.server.get_access_token',return_value=token), \
+                     patch('reporting.server.datetime') as clock,patch('reporting.posthog.PostHog.query',side_effect=query):
+                    clock.now.return_value=AS_OF
+                    result=await client.call_tool('analytics_daily_report',{'report_day':'2026-10-09'})
+                    self.assertTrue(result.data['complete'])
+                    self.assertTrue(result.data['ux']['coverage']['complete'])
+                    self.assertEqual(result.data['ux']['blocks']['journey']['rows']['journey'][0]['used'],1)
+                    self.assertEqual(set(result.data['dashboards']),{'overview','journey','ux'})
+                    def partial(sql):
+                        if 'per_flow AS' in sql: raise RuntimeError('PRIVATE error')
+                        return query(sql)
+                    with patch('reporting.posthog.PostHog.query',side_effect=partial):
+                        result=await client.call_tool('analytics_daily_report',{'report_day':'2026-10-09'})
+                        self.assertTrue(result.data['complete'])
+                        self.assertFalse(result.data['ux']['coverage']['complete'])
+                        self.assertNotIn('PRIVATE',json.dumps(result.data))
+
     async def test_fixed_tools_and_failure_visibility(self):
         from cryptography.fernet import Fernet
         from fastmcp import Client
@@ -93,6 +167,42 @@ class MCPTests(unittest.IsolatedAsyncioTestCase):
                     self.assertFalse(data['complete'])
                     self.assertEqual(len(data['errors']), 6)
                     self.assertEqual(data['data'], {})
+                    self.assertTrue(all(value['status'] == 'unavailable'
+                                        for value in data['query_coverage'].values()))
+                with patch('reporting.server.get_access_token', return_value=token), \
+                     patch('reporting.posthog.PostHog.query', return_value=[]):
+                    result = await client.call_tool('analytics_daily_report', {})
+                    self.assertTrue(result.data['complete'])
+                    self.assertTrue(result.data['ux']['coverage']['complete'])
+                    self.assertEqual(len(result.data['ux']['blocks']), 5)
+                    self.assertTrue(all(block['status'] == 'available'
+                                        for block in result.data['ux']['blocks'].values()))
+                    self.assertEqual(result.data['ux']['coverage']['status'],'zero_observed')
+                    self.assertTrue(all(value['status'] == 'available_empty'
+                                        for value in result.data['query_coverage'].values()))
+                links = await client.call_tool('analytics_dashboard_links', {})
+                self.assertEqual(links.data['dashboards']['ux'],
+                                 'https://posthog.example/project/1/dashboard/4')
+                model = {'provider': 'synthetic', 'model_id': 'synthetic-model',
+                         'event': 'generation_submitted', 'events': 1}
+                with patch('reporting.server.get_access_token', return_value=token), \
+                     patch('reporting.posthog.PostHog.query', side_effect=[[], [], [], [model] * 100, [], []]+[[]]*16):
+                    result = await client.call_tool('analytics_daily_report', {})
+                    self.assertTrue(result.data['complete'])
+                    self.assertTrue(result.data['query_coverage']['models']['truncated'])
+                with patch('reporting.server.get_access_token', return_value=token), \
+                     patch('reporting.posthog.PostHog.query', side_effect=[
+                         [{'day': '2026-10-09', 'event': 'model_selected', 'deliveries': 1,
+                           'events': 1, 'identities': 1, 'distinct_id': 'private-identity'}],
+                         [], [], [], [], []]+[[]]*16):
+                    result = await client.call_tool('analytics_daily_report', {})
+                    self.assertFalse(result.data['complete'])
+                    self.assertEqual(set(result.data['errors']), {'daily_events'})
+                    self.assertNotIn('private-identity', json.dumps(result.data))
+                with patch('reporting.server.get_access_token', return_value=token), \
+                     patch('reporting.posthog.PostHog.query', side_effect=RuntimeError('private raw SQL/token')):
+                    result = await client.call_tool('analytics_daily_report', {})
+                    self.assertNotIn('private raw SQL/token', json.dumps(result.data))
                 with patch('reporting.server.get_access_token', return_value=None):
                     with self.assertRaises(Exception):
                         await client.call_tool('analytics_daily_report', {})

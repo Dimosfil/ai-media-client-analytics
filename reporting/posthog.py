@@ -4,6 +4,15 @@ import urllib.request
 from urllib.parse import urlparse
 
 
+class QueryRows(list):
+    """Aggregate rows plus transport coverage; never discard upstream truncation."""
+
+    def __init__(self, rows, truncated=False, columns=None):
+        super().__init__(rows)
+        self.truncated = truncated
+        self.columns = columns
+
+
 class PostHog:
     def __init__(self, origin, project_id, token, timeout=45):
         parsed = urlparse(origin)
@@ -45,6 +54,8 @@ class PostHog:
         if not isinstance(response, dict):
             raise RuntimeError('Unexpected query response shape')
         status = response.get('query_status') or {}
+        if not isinstance(status,dict):
+            raise RuntimeError('Unexpected query response shape')
         if response.get('error') or status.get('error') or status.get('complete') is False:
             raise RuntimeError('PostHog query failed')
         rows, columns = response.get('results'), response.get('columns')
@@ -52,4 +63,8 @@ class PostHog:
             raise RuntimeError('PostHog did not return synchronous query results')
         if len(rows) > 400 or any(not isinstance(row, list) or len(row) != len(columns) for row in rows):
             raise RuntimeError('Unexpected query response shape')
-        return [dict(zip(columns, row)) for row in rows]
+        if any(not isinstance(column, str) for column in columns) or len(set(columns)) != len(columns):
+            raise RuntimeError('Unexpected query response shape')
+        return QueryRows([dict(zip(columns, row)) for row in rows],
+                         truncated=bool(response.get('hasMore') or response.get('has_more')
+                                        or response.get('is_truncated') or response.get('next')),columns=columns)

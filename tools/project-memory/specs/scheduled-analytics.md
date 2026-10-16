@@ -1,9 +1,36 @@
 # Scheduled analytics contract
 
-Status: VPS bridge and dashboards deployed; user reports a successful cloud tool call
-with complete=true on 2026-10-07. Scheduled delivery, refresh and restart continuity unverified.
-Last local check: 2026-10-06. Sources: `reporting/`, `tests/test_reporting.py`,
+Status: UX v2 deployed on 2026-10-16; both connected tools work after the reporting
+restart with the existing OAuth grant. User supplied daily reports. Scheduler
+execution and explicit refresh remain unverified.
+Last live/local check: 2026-10-16. Sources: `reporting/`, `tests/test_reporting.py`,
 `POSTHOG_VERSION`; operational guide: `docs/scheduled-analytics.md`.
+
+Additive extension implemented 2026-10-10 and deployed 2026-10-16: metadata includes explicit report-day,
+previous-day, seven-day baseline and legacy-window UTC bounds, including daily
+row periods. Each legacy query has coverage status, limit and conservative
+truncation flag. MCP validates aggregate columns/values and returns fixed safe
+errors. Upstream truncation survives transport. UX dashboard 4 is added when
+missing, existing Overview/Journey URLs preserved and restricted to configured
+origin/project. Legacy complete still means success of six queries, never UX
+coverage. Separate ux.coverage accounts for five implemented blocks, missing
+linkage properties, failures and upstream/output truncation. Warnings identify
+mixed schema/populations and the debug_assumed
+coverage change on 2026-10-09. Source/test pointers: reporting/aggregate_safety.py,
+reporting/queries.py, reporting/posthog.py, reporting/server.py,
+tests/test_reporting.py; public contract: docs/report-contract.md.
+
+Four canonical application files were read with user authorization on 2026-10-10.
+Implemented semantics and source/test map: [UX daily report](ux-daily-report.md).
+Six legacy and sixteen fixed UX queries run serially within a 270-second budget;
+UX payload has a 512,000-byte compact JSON limit. All 22 aggregate and eight chart
+queries executed on the live API. Model regex compatibility was fixed while
+preserving the canonical ID boundary. Operator --allow-truncated explicitly
+permits bounded results, never query/schema failures. The connected report has
+all five blocks, no query errors and partial UX coverage because of row/JSON
+limits; legacy complete=true is independent. Only reporting code was switched;
+prompt/schedule, database connection, OAuth config/state and PostHog were preserved.
+Evidence: docs/reporting-deployment-2026-10-16.md.
 
 ## Ownership and boundaries
 
@@ -21,7 +48,8 @@ Last local check: 2026-10-06. Sources: `reporting/`, `tests/test_reporting.py`,
 Only tools `analytics_daily_report(report_day?: ISO date)` and
 `analytics_dashboard_links()` are exposed. Project, SQL, properties and event names
 are fixed server configuration. Reports allow complete days within the past 30 days.
-Six aggregate queries execute serially, with bounded rows and API timeout.
+Six legacy plus sixteen UX aggregate queries execute serially, with bounded
+rows, API timeout and a shared per-call budget.
 OAuth uses a confidential native PostHog application with ceilings query:read and
 project:read, exact ChatGPT redirect allowlist, PKCE, consent and project selection.
 Persistent OAuth state is encrypted with a separate stable key, signed sessions use
@@ -50,7 +78,8 @@ the whole eight-day window. Missing coverage and sparse samples limit interpreta
 No financial conclusions without application PostgreSQL reconciliation.
 Daily narrative follows the user journey, compares yesterday with prior day/seven-day
 mean, and labels missing measurement. Current six aggregates do NOT measure new
-visitors, registrations, connected conversion cohorts or retention. login_completed
+visitors, registrations, connected conversion cohorts or retention. UX schema-v2
+preparation cohorts are implemented separately. login_completed
 must never be relabeled as registration; purchase_fulfilled counts are not revenue.
 Advice separates observation, hypothesis and verification; small samples cannot
 justify causal or statistically significant claims. Prompt: reporting/daily-task-prompt.md.
@@ -66,7 +95,8 @@ cohorts; identity funnel cannot silently link anonymous and account actors.
 Local tests verify API response failure handling, no cross-origin pagination, timezone
 boundaries, fixed MCP schemas, HTTP 401 without auth, OAuth discovery and redirect
 rejection, idempotent setup preserving existing panels, and existing Compose policies.
-All eight queries validate against pinned upstream Pydantic schema.
+Fixed API payloads were validated against the pinned upstream schema; 2026-10-16
+live checks covered all six legacy/sixteen UX queries and eight chart sources.
 Live verification 2026-10-06: six aggregates/eight chart sources passed; two dashboards
 (IDs 2, 3) and eight insights created with idempotency/membership checked. Linux systemd
 service active; HTTPS metadata 200, unauthenticated MCP 401, private port externally
@@ -74,8 +104,9 @@ unreachable. Native OAuth app requires RS256 and persistent OIDC_RSA_PRIVATE_KEY
 FastMCP update-check setting accepts off; root-created venv must allow service-user reads.
 Encrypted reporting backup restored into a clean directory: bytes and ownership verified.
 This does NOT verify functional OAuth restoration or a full PostHog data restore.
-User reports grant/cloud call success on 2026-10-07. Refresh, restart continuity and
-scheduled delivery with computer off remain unverified. See docs/reporting-deployment-2026-10-06.md.
+Historical grant/cloud call: 2026-10-07. Restart continuity is now confirmed by both
+connected tools on 2026-10-16. Explicit refresh and scheduled delivery with computer
+off remain unverified. See docs/reporting-deployment-2026-10-16.md.
 
 Operator first validates 6 aggregates/8 chart sources on live API using temporary token,
 then creates panels, installs/configures OAuth bridge, connects ChatGPT personally,

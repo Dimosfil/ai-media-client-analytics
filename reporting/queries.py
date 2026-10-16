@@ -57,13 +57,39 @@ def queries(end_day: date, days: int = 8, zone: str = 'Europe/Moscow'):
 
 
 def report_metadata(end_day: date, zone: str):
+    def period(end, days):
+        start, stop = interval(end, days, zone)
+        return {'start': start.isoformat(), 'end_exclusive': stop.isoformat(),
+                'timezone': zone, 'days': days}
+
+    periods = {'report_day': period(end_day, 1),
+               'previous_day': period(end_day - timedelta(days=1), 1),
+               'baseline': period(end_day - timedelta(days=1), 7),
+               'legacy_window': period(end_day, 8)}
+    daily_periods = {'row_period_key': 'day', 'periods': {
+        (end_day - timedelta(days=offset)).isoformat(): period(end_day - timedelta(days=offset - 1), 1)
+        for offset in range(1, 9)}}
     return {
         'timezone': zone,
         'report_day': (end_day - timedelta(days=1)).isoformat(),
         'previous_day': (end_day - timedelta(days=2)).isoformat(),
         'baseline_days': 7,
+        'periods': periods,
+        'aggregate_periods': {
+            'daily_events': daily_periods,
+            'daily_outcomes': daily_periods,
+            'daily_duration': daily_periods,
+            'models': periods['legacy_window'],
+            'account_users': periods['legacy_window'],
+            'freshness': {'start': periods['legacy_window']['start'],
+                          'end_exclusive': 'query execution time', 'timezone': zone},
+        },
+        'legacy_population': 'all delivered catalog events; schema versions and UI/release populations are mixed',
         'warnings': [
-            'Only explicitly captured consented events are measured, not all traffic.',
+            'Capture depends on collection_mode: consented capture and debug_assumed bypass must be distinguished.',
+            'Coverage changed on 2026-10-09: debug builds began capture without confirmation; more capture does not prove more usage.',
+            'Legacy aggregates mix schema v1/v2 and populations; use separate schema-v2 UX samples for product conclusions.',
+            'The five main UX dashboard reports filter user/release; absence there does not prove debug/admin inactivity.',
             'Visitor v_ and account u_ identities are separate; do not sum them as people.',
             'Daily active identities cannot be added to obtain weekly active identities.',
             'Submitted and completed jobs can fall on different days.',
